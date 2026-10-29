@@ -532,7 +532,7 @@ const POWERS = {
     const fx = W.fx;
     const perp = [-aim[1], aim[0]];
     const blue = img('orb_blue'), red = img('orb_red');
-    let t = 0;
+    let t = 0, ringT = 0;
     W.audio.play('purpleCharge');
     const charge = 1.3;
     pl.effects.push({
@@ -544,8 +544,35 @@ const POWERS = {
         placeImg(blue, cx + perp[0] * sep, cy + perp[1] * sep, 20 + Math.sin(t * 12) * 2);
         placeImg(red, cx - perp[0] * sep, cy - perp[1] * sep, 20 + Math.cos(t * 12) * 2);
         fx.suck(cx, cy, 2.2, 2, k > 0.6 ? 0xc080ff : 0x9fd0ff);
+        // derrière Gojo : flux bleu et rouge en spirale qui s'accumulent et virent au violet
+        const ax = pl.x - aim[0] * 1.1, ay = pl.y - aim[1] * 1.1, az = 26;
+        const n = Math.round(2 + k * 4);
+        for (let i = 0; i < n; i++) {
+          const side = i % 2 ? 1 : -1; // bleu d'un côté, rouge de l'autre
+          const a = Math.atan2(perp[1] * side, perp[0] * side) + rand(-1.3, 1.3) + t * 4 * side;
+          const r = rand(1.2, 2.6) * (1 - k * 0.45);
+          const sx = ax + Math.cos(a) * r, sy = ay + Math.sin(a) * r, sz = az + rand(-22, 22);
+          const L = rand(0.25, 0.45);
+          const sw = side * 0.6 * r / L; // tourbillon
+          const merged = Math.random() < k * k * 0.8;
+          const tint = merged ? (Math.random() < 0.5 ? 0xc080ff : 0xa24bff) : side > 0 ? (Math.random() < 0.5 ? 0x3d8bff : 0x9fd0ff) : (Math.random() < 0.5 ? 0xff3b3b : 0xff9090);
+          fx.spawn(Math.random() < 0.6 ? 'px3' : 'px4', sx, sy, sz, (ax - sx) / L - Math.sin(a) * sw, (ay - sy) / L + Math.cos(a) * sw, (az - sz) / L, L, { tint, add: true });
+        }
+        // noyau violet qui grossit au point d'accumulation
+        if (k > 0.25) {
+          for (let i = 0; i < 1 + k * 4; i++) fx.spawn('px3', ax + rand(-0.15, 0.15), ay + rand(-0.15, 0.15), az + rand(-4, 4), rand(-0.6, 0.6) * k, rand(-0.6, 0.6) * k, rand(-20, 20), rand(0.1, 0.25), { tint: Math.random() < 0.3 ? 0xffffff : 0xc080ff, add: true, scale: 1 + k });
+          ringT -= dt;
+          if (ringT <= 0) { ringT = 0.14; fx.ring(ax, ay, 0.1, 0.5 + k * 1.1, 0.25, k > 0.6 ? 0xc080ff : (Math.random() < 0.5 ? 0x3d8bff : 0xff3b3b), 1, { top: false }); }
+        }
+        // arcs violets qui relient l'accumulation aux orbes juste avant le tir
+        if (k > 0.8 && Math.random() < 0.6) fx.beam(ax, ay, az, cx, cy, 20, 0.05, Math.random() < 0.5 ? 0xc080ff : 0xffffff, 1);
         if (k > 0.6) { W.slowmo = 0.45; W.slowmoT = 0.1; fx.shakeCam(1.5); }
-        if (t >= charge) { launchPurple(pl, cx, cy, aim); return false; }
+        if (t >= charge) {
+          fx.energy(ax, ay, az, 24, 0xc080ff, 4, 0.5); // l'accumulation éclate au lancement
+          fx.ring(ax, ay, 0.2, 2.2, 0.3, 0xc080ff, 2);
+          launchPurple(pl, cx, cy, aim);
+          return false;
+        }
         return true;
       },
       destroy() { blue.destroy(); red.destroy(); },
