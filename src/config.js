@@ -41,7 +41,8 @@ export const PRESETS = {
 // Expansions du territoire (fourchettes du cahier des charges : 20-30 s / 60-90 s).
 export const DOMAIN = {
   duration: 25,
-  radius: 12,           // ~ 3 à 4 rues
+  voidRadius: 18,       // 1,5x la taille de base (12)
+  shrineRadius: 36,     // 3x la taille de base (12)
   cinematic: 2.6,
   voidCooldown: 75,
   shrineCooldown: 80,

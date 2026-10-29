@@ -25,7 +25,10 @@ export class Domain {
 
   start(type, pl) {
     if (this.zone) return;
-    this.zone = { type, x: pl.x, y: pl.y, r: DOMAIN.radius, phase: 'cinematic', t: 0, slashT: 0, once: new Set(), onceB: new Set(), onceM: new Set(), waveR: 0 };
+    const r = type === 'void' ? DOMAIN.voidRadius : DOMAIN.shrineRadius;
+    // densité des effets proportionnelle à la surface (réf. rayon 12), plafonnée pour les mobiles
+    const area = Math.min(4, (r / 12) ** 2);
+    this.zone = { type, x: pl.x, y: pl.y, r, area, phase: 'cinematic', t: 0, slashT: 0, once: new Set(), onceB: new Set(), onceM: new Set(), waveR: 0 };
     this.cinematic = true;
     pl.state = 'cinematic'; pl.animT = 0; pl.inv = DOMAIN.cinematic + 0.3;
     W.ui && W.ui.domainTitle(type);
@@ -142,13 +145,13 @@ export class Domain {
     if (k < 0.5) return;
     const fx = W.fx;
     // braises rouges qui montent du sol et le long de la frontière
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 5 * z.area; i++) {
       const a = Math.random() * TAU, d = i < 2 ? z.r * k : Math.sqrt(Math.random()) * z.r * k;
       fx.spawn(Math.random() < 0.5 ? 'px2' : 'px1', z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, rand(0, 10), rand(-0.3, 0.3), rand(-0.3, 0.3), rand(30, 110), rand(0.5, 1.1),
         { tint: Math.random() < 0.7 ? 0xff2020 : 0xff8080, add: true });
     }
     // colonnes écarlates qui jaillissent de la frontière
-    if (Math.random() < 0.35) {
+    if (Math.random() < 0.35 * z.area) {
       const a = Math.random() * TAU, x = z.x + Math.cos(a) * z.r * k, y = z.y + Math.sin(a) * z.r * k;
       fx.beam(x, y, 0, x, y, rand(60, 140), 0.12, 0xff2020, 2);
     }
@@ -168,7 +171,7 @@ export class Domain {
   voidActive(dt, z) {
     const fx = W.fx;
     // motifs cosmiques : étoiles et éclats dans la zone
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2 * z.area; i++) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * z.r;
       fx.spawn('star', z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, rand(0, 50), rand(-0.2, 0.2), rand(-0.2, 0.2), rand(-4, 4), rand(0.8, 1.6), { tint: Math.random() < 0.3 ? 0x9fd0ff : 0xffffff, add: true });
     }
@@ -241,9 +244,9 @@ export class Domain {
     const eff = settings().effects;
     const qk = (W.quality === 'low' ? 0.45 : W.quality === 'high' ? 1 : 0.7) * (eff === 'reduced' ? 0.5 : eff === 'max' ? 1.3 : 1);
     // 1) déluge de taillades (~50x l'ancien débit) partout dans le territoire
-    z.visT = (z.visT || 0) + dt * (salvo ? 1500 : 550) * qk;
+    z.visT = (z.visT || 0) + dt * (salvo ? 1500 : 550) * qk * z.area;
     let n = 0;
-    while (z.visT >= 1 && n++ < 90) {
+    while (z.visT >= 1 && n++ < 90 * z.area) {
       z.visT -= 1;
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * (z.r - 0.3);
       this.slashFx(z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, salvo && Math.random() < 0.3);
@@ -268,7 +271,7 @@ export class Domain {
       this.slashFx(ix, iy, true);
     }
     for (const m of city.movables) if (!m.wreck && f(m.x, m.y)) city.damageMovable(m, salvo ? 30 : 12);
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 4 * z.area; i++) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * (z.r - 0.5);
       this.slashAt(z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, salvo);
     }
@@ -288,7 +291,7 @@ export class Domain {
     for (const b of W.city.buildings) if (b.state < 4 && f(b.cx, b.cy)) W.city.damageBuilding(b, 7000, b.cx, b.cy);
     for (const m of W.city.movables) if (f(m.x, m.y)) W.city.damageMovable(m, 999);
     for (const p of W.city.propsInCircle(z.x, z.y, z.r)) W.city.breakProp(p, 2);
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 40 * z.area; i++) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * (z.r - 0.5);
       const x = z.x + Math.cos(a) * d, y = z.y + Math.sin(a) * d;
       const b = Math.random() * Math.PI, L = rand(0.8, 2.2);
