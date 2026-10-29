@@ -59,6 +59,13 @@ function drawHumanoid(pb, P, q, back, ox, oy) {
     pb.rect(hnd[0] - 1, hnd[1] - 1, P.hand + 2, P.hand + 2, OUTLINE);
     pb.rect(hnd[0], hnd[1], P.hand, P.hand, dark ? col.skinD : col.skin);
     if (q.point && !dark) { const t = seg(hnd[0], hnd[1], q.nfa, 3); pb.line(hnd[0] + 1, hnd[1], t[0] + 1, t[1], col.skin); }
+    if (q.mudra && !dark) {
+      // mains jointes, doigts entrelacés, deux doigts dressés (signe du Malevolent Shrine)
+      pb.rect(hnd[0] - 2, hnd[1] - 4, 6, 6, OUTLINE);
+      pb.rect(hnd[0] - 1, hnd[1] - 1, 4, 2, col.skin);
+      pb.set(hnd[0], hnd[1] - 1, col.skinD); pb.set(hnd[0] + 2, hnd[1] - 1, col.skinD);
+      pb.rect(hnd[0], hnd[1] - 3, 1, 2, col.skin); pb.rect(hnd[0] + 2, hnd[1] - 3, 1, 2, col.skin);
+    }
     if (q.cross && !dark) {
       // index et majeur croisés, dressés vers le haut (signe de l'Unlimited Void)
       pb.rect(hnd[0], hnd[1] - 5, 3, 5, OUTLINE);
@@ -150,7 +157,7 @@ const gojoHead = (pb, hx, hy, back, P, q = {}) => {
     pb.set(hx + 4, hy + 2, P.col.skinD);
   }
 };
-const sukunaHead = (pb, hx, hy, back, P) => {
+const sukunaHead = (pb, hx, hy, back, P, q = {}) => {
   // cheveux roses d'Itadori plaqués vers l'arrière, racines sombres sur les côtés
   const H = C('#f2a3ab'), Hd = C('#c97680'), Hl = C('#ffd0d5'), under = C('#3a2228'), mark = C('#16161f'), eye = C('#e0202a');
   faceBase(pb, hx + 1, hy, P);
@@ -161,9 +168,17 @@ const sukunaHead = (pb, hx, hy, back, P) => {
   if (back) {
     pb.ellipse(hx, hy + 0.5, 4.6, 4.4, (x, y, dx, dy) => (dy > 0.3 ? under : dx < -0.2 ? Hd : H));
   } else {
-    pb.set(hx + 2, hy, eye); pb.set(hx + 4, hy, eye);
-    pb.set(hx + 2, hy + 1, mark); pb.set(hx + 4, hy + 1, mark); // seconds yeux (fentes) sous les yeux
-    pb.rect(hx + 1, hy + 3, 4, 1, mark); // marque sur les joues
+    if (q.glow) { // yeux qui s'embrasent : les quatre yeux brillent
+      const hot = C('#ff5050'), core = C('#ffe0d0');
+      for (const ex of [hx + 2, hx + 4]) { pb.set(ex, hy, core); pb.set(ex, hy + 1, hot); pb.set(ex + 1, hy, hot); }
+    } else {
+      pb.set(hx + 2, hy, eye); pb.set(hx + 4, hy, eye);
+      pb.set(hx + 2, hy + 1, mark); pb.set(hx + 4, hy + 1, mark); // seconds yeux (fentes) sous les yeux
+    }
+    if (q.grin) { // sourire carnassier, dents visibles
+      pb.rect(hx + 1, hy + 3, 5, 1, mark); pb.set(hx + 5, hy + 2, mark);
+      pb.set(hx + 2, hy + 3, C('#f4f0e6')); pb.set(hx + 4, hy + 3, C('#f4f0e6'));
+    } else pb.rect(hx + 1, hy + 3, 4, 1, mark); // marque sur les joues
     pb.set(hx + 3, hy - 2, mark); // marque sur le front
     pb.rect(hx - 2, hy - 1, 2, 3, under);
   }
@@ -343,6 +358,16 @@ ANIMS.sukuna = {
     p({ lean: -0.12, nua: 1.75, nfa: 1.8, fua: -1.35, ffa: 1.3, nt: 0.6, nk: 0.2, ft: -0.65, fk: 0.35 }),
     p({ lean: -0.14, bob: 1, nua: 1.78, nfa: 1.82, fua: -1.4, ffa: 1.4, nt: 0.6, nk: 0.25, ft: -0.65, fk: 0.4 })] },
   sign: { fps: 4, poses: [p({ nua: 0.5, nfa: 2.6, fua: 0.65, ffa: 2.5 }), p({ bob: 1, nua: 0.5, nfa: 2.65, fua: 0.65, ffa: 2.55 })] },
+  // Malevolent Shrine : tête baissée, mains qui se joignent, signe formé, tête relevée, yeux embrasés, sourire
+  domain: { fps: 5, hold: true, poses: [
+    p({ lean: 0.18, ht: 1, nua: 0.2, nfa: 0.3, fua: -0.1, ffa: 0.1 }),
+    p({ lean: 0.2, bob: 1, ht: 1, nua: 0.6, nfa: 1.4, fua: 0.5, ffa: 1.3 }),
+    p({ lean: 0.16, bob: 1, ht: 1, nua: 0.6, nfa: 2.2, fua: 0.7, ffa: 2.2 }),
+    p({ lean: 0.1, ht: 1, nua: 0.55, nfa: 2.5, fua: 0.7, ffa: 2.45, mudra: true }),
+    p({ lean: 0.06, nua: 0.55, nfa: 2.55, fua: 0.7, ffa: 2.5, mudra: true, glow: true }),
+    p({ lean: -0.04, ht: -1, nua: 0.55, nfa: 2.6, fua: 0.7, ffa: 2.55, mudra: true, glow: true, grin: true }),
+    p({ lean: -0.1, ht: -1, nt: 0.25, ft: -0.25, nua: 0.55, nfa: 2.6, fua: 0.7, ffa: 2.55, mudra: true, glow: true, grin: true }),
+    p({ lean: -0.1, ht: -1, bob: 1, nt: 0.25, ft: -0.25, nua: 0.55, nfa: 2.62, fua: 0.7, ffa: 2.57, mudra: true, glow: true, grin: true })] },
   stagger: { fps: 8, poses: [p({ lean: -0.4, nua: -1.2, nfa: -2.0, fua: -0.9, ffa: -1.6, nk: 0.4 })] },
 };
 const curseAnims = (lean = 0) => ({
