@@ -3,7 +3,7 @@ import { W } from './state.js';
 import { KITS, MAP_N } from './config.js';
 import { settings } from './settings.js';
 import { isoX, isoY } from './util.js';
-import { registerArt } from './gfx/registry.js';
+import { registerArt, warmupStep } from './gfx/registry.js';
 import { initGroundArt, Ground } from './world/ground.js';
 import { generateCity, nearestWalkable } from './world/citygen.js';
 import { City } from './world/city.js';
@@ -139,6 +139,7 @@ export class WorldScene extends Phaser.Scene {
     const real = Math.min(delta, 50) / 1000 * (W.testSpeed || 1);
     const cam = this.cameras.main;
     this.autoQuality(real);
+    if (W.mode !== 'play' || (this.warmT = (this.warmT || 0) + 1) % 4 === 0) warmupStep();
 
     if (W.mode === 'menu') {
       // la ville défile lentement derrière le menu

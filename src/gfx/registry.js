@@ -1,7 +1,7 @@
 // Enregistre les canvas générés comme textures Phaser et mémorise leurs points d'ancrage.
 import { makePropArt } from './propArt.js';
 import { buildSheet, SHEET_KEYS } from './puppet.js';
-import { drawBuilding } from './buildingArt.js';
+import { drawBuilding, VARIANTS } from './buildingArt.js';
 
 export const ART = { anchors: {}, sheets: {} };
 let scene = null;
@@ -38,4 +38,15 @@ export function buildingTex(variant, state) {
     add(key, b.canvas, b.ox, b.oy);
   }
   return key;
+}
+
+// Pré-génère peu à peu les états de destruction (une texture par appel) pour éviter les saccades au premier impact.
+let warmQueue = null;
+export function warmupStep() {
+  if (!warmQueue) {
+    warmQueue = [];
+    for (const state of [1, 2, 3, 4]) for (const v of Object.keys(VARIANTS)) warmQueue.push([v, state]);
+  }
+  const job = warmQueue.shift();
+  if (job) buildingTex(job[0], job[1]);
 }

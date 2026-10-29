@@ -108,14 +108,16 @@ export class Ground {
     }
   }
 
-  // Envoie au GPU les blocs modifiés (au plus une fois par image) et masque les blocs hors caméra.
+  // Envoie au GPU au plus 2 blocs modifiés par image (visibles en priorité) et masque les blocs hors caméra.
   update(cam) {
     const vx = cam.worldView.x - 8, vy = cam.worldView.y - 8, vw = cam.worldView.width + 16, vh = cam.worldView.height + 16;
+    let budget = 2;
     for (const ch of this.chunks) {
       const vis = !(ch.left + ch.w < vx || ch.left > vx + vw || ch.top + ch.h < vy || ch.top > vy + vh);
       if (ch.img.visible !== vis) ch.img.setVisible(vis);
-      if (ch.dirty) { ch.tex.refresh(); ch.dirty = false; }
+      if (ch.dirty && vis && budget > 0) { ch.tex.refresh(); ch.dirty = false; budget--; }
     }
+    if (budget > 0) for (const ch of this.chunks) if (ch.dirty && budget-- > 0) { ch.tex.refresh(); ch.dirty = false; }
   }
 
   destroy() {

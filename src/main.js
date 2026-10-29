@@ -41,6 +41,7 @@ function boot() {
   });
   W.phaser = game;
   const qs = new URLSearchParams(location.search);
+  if (qs.has('ui')) game.events.once('world-ready', () => W.ui.show(qs.get('ui')));
   if (qs.has('test')) game.events.once('world-ready', () => import('./devtest.js').then((m) => m.runTest(qs)));
 
   let rt = null;
@@ -61,6 +62,8 @@ function boot() {
   const unlock = () => W.audio.unlock();
   window.addEventListener('pointerdown', unlock, { passive: true });
   window.addEventListener('keydown', unlock);
+  window.addEventListener('touchend', unlock, { passive: true });
+  window.addEventListener('click', unlock);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && W.mode === 'play') W.game.pause();
