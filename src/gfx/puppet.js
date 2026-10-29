@@ -50,7 +50,11 @@ function drawHumanoid(pb, P, q, back, ox, oy) {
     const fc = P.bareForearm ? (dark ? col.skinD : col.skin) : c;
     if (P.blade) limb(pb, [A[1], A[2], seg(A[2][0], A[2][1], (q.blade ?? 0.5) + Math.atan2(A[2][0] - A[1][0], A[2][1] - A[1][1]), P.blade)], P.armW - 1, dark ? shadeC(col.accent, 0.8) : col.accent);
     else limb(pb, [A[1], A[2]], P.armW, fc);
-    if (P.tattoo && !back) { const m = [(A[1][0] + A[2][0]) / 2, (A[1][1] + A[2][1]) / 2]; pb.set(m[0], m[1], OUTLINE); }
+    if (P.tattoo === 'bands') {
+      // bracelets tatoués aux poignets et bande sur le biceps
+      for (const k of [0.7, 0.85]) pb.set(lerp(A[1][0], A[2][0], k), lerp(A[1][1], A[2][1], k), OUTLINE);
+      pb.set(lerp(A[0][0], A[1][0], 0.55), lerp(A[0][1], A[1][1], 0.55), OUTLINE);
+    } else if (P.tattoo && !back) { const m = [(A[1][0] + A[2][0]) / 2, (A[1][1] + A[2][1]) / 2]; pb.set(m[0], m[1], OUTLINE); }
     const hnd = A[2];
     pb.rect(hnd[0] - 1, hnd[1] - 1, P.hand + 2, P.hand + 2, OUTLINE);
     pb.rect(hnd[0], hnd[1], P.hand, P.hand, dark ? col.skinD : col.skin);
@@ -134,9 +138,10 @@ const gojoHead = (pb, hx, hy, back, P) => {
   }
 };
 const sukunaHead = (pb, hx, hy, back, P) => {
-  const H = C('#f2a3ab'), Hd = C('#c97680'), Hl = C('#ffd0d5'), under = C('#4e2c30'), mark = C('#16161f'), eye = C('#e0202a');
+  // cheveux roses d'Itadori plaqués vers l'arrière, racines sombres sur les côtés
+  const H = C('#f2a3ab'), Hd = C('#c97680'), Hl = C('#ffd0d5'), under = C('#3a2228'), mark = C('#16161f'), eye = C('#e0202a');
   faceBase(pb, hx + 1, hy, P);
-  const spikes = [[-6, -5], [-4, -9], [0, -10], [4, -8], [6, -4]];
+  const spikes = [[-8, -4], [-7, -8], [-4, -11], [0, -11], [3, -9]];
   for (const [sx, sy] of spikes) pb.poly([[hx - 4, hy - 1], [hx + 4, hy - 2], [hx + sx, hy + sy]], OUTLINE);
   for (const [sx, sy] of spikes) pb.poly([[hx - 3, hy - 1], [hx + 3, hy - 2], [hx + sx * 0.85, hy + sy * 0.85]], (x, y) => (x < hx - 1 ? Hd : y < hy - 6 ? Hl : H));
   pb.ellipse(hx - 0.5, hy - 2.5, 4.6, 3, (x, y, dx) => (dx < -0.3 ? Hd : H));
@@ -144,8 +149,9 @@ const sukunaHead = (pb, hx, hy, back, P) => {
     pb.ellipse(hx, hy + 0.5, 4.6, 4.4, (x, y, dx, dy) => (dy > 0.3 ? under : dx < -0.2 ? Hd : H));
   } else {
     pb.set(hx + 2, hy, eye); pb.set(hx + 4, hy, eye);
-    pb.rect(hx + 1, hy + 2, 4, 1, mark); // marques sous les yeux
-    pb.set(hx + 2, hy - 1, mark); pb.set(hx + 4, hy - 1, mark);
+    pb.set(hx + 2, hy + 1, mark); pb.set(hx + 4, hy + 1, mark); // seconds yeux (fentes) sous les yeux
+    pb.rect(hx + 1, hy + 3, 4, 1, mark); // marque sur les joues
+    pb.set(hx + 3, hy - 2, mark); // marque sur le front
     pb.rect(hx - 2, hy - 1, 2, 3, under);
   }
 };
@@ -182,13 +188,22 @@ export const BODIES = {
     head: gojoHead, trail: C('#bfe2ff'),
     torsoFn: (dx, dy, back) => (!back && dy > 9 && dy < 12 && dx > -1 && dx < 3 ? C('#36406a') : !back && dy === 7 && dx === 1 ? C('#e8c050') : 0),
   },
+  // Sukuna à Shibuya (saison 2) : dans le corps d'Itadori, torse nu couvert de tatouages noirs, pantalon d'uniforme.
   sukuna: {
     fw: 48, fh: 58, ox: 24, oy: 55,
     thigh: 7, shin: 8, torso: 12, uarm: 6, farm: 6, legW: 3, armW: 3, hipW: 8, shW: 10, headR: 4, hand: 2,
-    col: { skin: C('#f1cdb5'), skinD: C('#d2a68c'), top: C('#ece8e0'), topD: C('#c4bdb0'), topL: C('#ffffff'), pants: C('#2c272b'), pantsD: C('#1c181b'), shoe: C('#141012') },
-    head: sukunaHead, bareForearm: true, tattoo: true, trail: C('#ffb0b0'),
-    skirt: { len: 9, wTop: 9, wBot: 14, col: C('#ece8e0'), colD: C('#c4bdb0') },
-    torsoFn: (dx, dy) => (dy >= 0 && dy < 3 ? C('#1a1418') : 0),
+    col: { skin: C('#f0c8ac'), skinD: C('#cf9f82'), top: C('#f0c8ac'), topD: C('#cf9f82'), topL: C('#fbdcc4'), pants: C('#1f2236'), pantsD: C('#141626'), shoe: C('#1a1418') },
+    head: sukunaHead, bareForearm: true, tattoo: 'bands', trail: C('#ffb0b0'),
+    torsoFn: (dx, dy, back) => {
+      const ink = C('#14101a');
+      if (dy < 2) return C('#2a1f2e'); // ceinture
+      if (dy === 2) return C('#1f2236');
+      if (back) return (dy === 8 || dy === 9) && Math.abs(dx) < 4 ? ink : 0;
+      if (dy === 10 || (dy === 9 && Math.abs(dx) > 2)) return ink;   // bande sur la poitrine
+      if (dy === 7 && Math.abs(dx) < 3) return ink;                    // seconde bande
+      if (dy >= 3 && dy <= 6 && dx === 0) return C('#cf9f82');         // ligne des abdos
+      return 0;
+    },
   },
   rodeur: {
     fw: 48, fh: 56, ox: 24, oy: 53,

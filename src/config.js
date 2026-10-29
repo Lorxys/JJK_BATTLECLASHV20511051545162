@@ -43,7 +43,9 @@ export const DOMAIN = {
   duration: 25,
   voidRadius: 18,       // 1,5x la taille de base (12)
   shrineRadius: 36,     // 3x la taille de base (12)
-  cinematic: 2.6,
+  cinematic: 2.6,       // Unlimited Void
+  shrineBlack: 1.8,     // Malevolent Shrine : écran noir « 領域展開 »
+  shrineCinematic: 5.4, // Malevolent Shrine : durée totale (écran noir + plan sur Sukuna)
   voidCooldown: 75,
   shrineCooldown: 80,
   voidEliteStun: 6.5,   // 5-8 s

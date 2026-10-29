@@ -173,7 +173,7 @@ export class WorldScene extends Phaser.Scene {
       P.update(dt, cine ? NO_INPUT : input);
       W.enemies.update(dt);
       W.domain.update(dt);
-      W.city.update(dt, cam);
+      if (cine) W.city.cull(cam, dt); else W.city.update(dt, cam); // cinématique : la ville se fige
       W.fx.update(dt);
       W.night.update(dt, cam);
     }

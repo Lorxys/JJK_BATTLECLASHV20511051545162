@@ -173,3 +173,16 @@ input[type=range] { pointer-events: auto; width: 100%; accent-color: var(--accen
 #shrinevig.on { opacity: 1; animation: shrinebeat 0.84s infinite; }
 #shrinevig::after { content: ''; position: absolute; inset: 0; background: rgba(255, 0, 20, 0.10); mix-blend-mode: multiply; }
 @keyframes shrinebeat { 0%, 100% { opacity: 0.75; } 12% { opacity: 1; } 24% { opacity: 0.8; } 34% { opacity: 0.95; } }
+
+/* ---------- Cinématique du Malevolent Shrine ---------- */
+#dcine { position: fixed; inset: 0; pointer-events: none; z-index: 30; display: none; }
+#dcine.on { display: block; }
+#dcine .blk { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vh; }
+#dcine .blk .k { font-family: var(--kanji); font-size: 20vh; color: #fff; letter-spacing: 2vh; text-shadow: 4px 4px 0 #6a0008; animation: dcineIn 0.5s steps(5) both; }
+#dcine .blk .n { font-family: 'Silkscreen', monospace; font-size: clamp(10px, 3vh, 18px); color: #ff5a5a; letter-spacing: 6px; animation: dcineIn 0.5s 0.4s steps(5) both; }
+#dcine .bar { position: absolute; left: 0; right: 0; height: 13vh; background: #000; }
+#dcine .bar.t { top: 0; } #dcine .bar.b { bottom: 0; }
+#dcine .cap { position: absolute; bottom: 2.5vh; left: 0; right: 0; text-align: center; font-family: var(--kanji); font-size: 7vh; color: #ffd0d0; text-shadow: 3px 3px 0 #c4141e, 6px 6px 0 #000; animation: dcineIn 0.4s steps(4) both; }
+#dcine.black .bar, #dcine.black .cap { display: none; }
+#dcine:not(.black) .blk { display: none; }
+@keyframes dcineIn { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }

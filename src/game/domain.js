@@ -28,12 +28,39 @@ export class Domain {
     const r = type === 'void' ? DOMAIN.voidRadius : DOMAIN.shrineRadius;
     // densité des effets proportionnelle à la surface (réf. rayon 12), plafonnée pour les mobiles
     const area = Math.min(4, (r / 12) ** 2);
-    this.zone = { type, x: pl.x, y: pl.y, r, area, phase: 'cinematic', t: 0, slashT: 0, once: new Set(), onceB: new Set(), onceM: new Set(), waveR: 0 };
+    const shrine = type === 'shrine';
+    const cine = shrine ? DOMAIN.shrineCinematic : DOMAIN.cinematic;
+    // Malevolent Shrine : écran noir puis plan sur Sukuna ; t0 = début de l'apparition du territoire
+    const t0 = shrine ? DOMAIN.shrineBlack : 0;
+    this.zone = { type, x: pl.x, y: pl.y, r, area, phase: 'cinematic', t: 0, cine, t0, slashT: 0, once: new Set(), onceB: new Set(), onceM: new Set(), waveR: 0 };
     this.cinematic = true;
-    pl.state = 'cinematic'; pl.animT = 0; pl.inv = DOMAIN.cinematic + 0.3;
+    pl.state = 'cinematic'; pl.animT = 0; pl.inv = cine + 0.3;
+    const A = W.audio;
+    if (shrine) {
+      this.cineDom('black');
+      if (A) { A.duck(true); if (A.has('domain_sukuna')) A.playBuf('domain_sukuna'); else A.play('domain'); }
+      return;
+    }
     W.ui && W.ui.domainTitle(type);
-    W.audio && W.audio.play('domain');
+    if (A) { if (A.has('domain_gojo')) A.playBuf('domain_gojo'); else A.play('domain'); }
     W.fx.shakeCam(4);
+  }
+
+  // Couche DOM de la cinématique du Shrine : 'black' (écran noir + 領域展開), 'shot' (bandes cinéma + nom), null.
+  cineDom(mode) {
+    if (!this.cineEl) {
+      const el = this.cineEl = document.createElement('div');
+      el.id = 'dcine';
+      el.innerHTML = '<div class="blk"><div class="k">領域展開</div><div class="n">RYŌIKI TENKAI</div></div><div class="bar t"></div><div class="bar b"></div><div class="cap">伏魔御廚子</div>';
+      document.body.appendChild(el);
+    }
+    const el = this.cineEl;
+    el.className = mode ? 'on ' + mode : '';
+    if (mode) { const c = el.querySelector(mode === 'black' ? '.k' : '.cap'); c.style.animation = 'none'; void c.offsetWidth; c.style.animation = ''; }
+    const cam = this.scene.cameras.main;
+    cam.setZoom(mode === 'shot' ? 2 : 1); // gros plan net (zoom entier)
+    // l'interface disparaît pendant la cinématique
+    if (W.mode === 'play') { W.input && W.input.show(!mode); W.ui && W.ui.showHud(!mode); }
   }
 
   filter() {
@@ -51,12 +78,17 @@ export class Domain {
     let reveal = 1;
 
     if (z.phase === 'cinematic') {
-      reveal = Math.min(1, z.t / (DOMAIN.cinematic * 0.8));
+      const ct = z.t - z.t0, span = z.cine - z.t0; // temps et durée du plan visible
+      if (ct < 0) { this.draw(z, 0); return; } // écran noir : rien d'autre
+      if (!void_ && !z.shot) { z.shot = true; this.cineDom('shot'); fx.shakeCam(5); }
+      reveal = Math.min(1, ct / (span * (void_ ? 0.8 : 0.55)));
       if (Math.random() < 0.5) fx.energy(z.x, z.y, 20, 3, void_ ? 0x9fd0ff : 0xff3030, 4, 0.6);
-      if (!void_ && !this.shrine && z.t > DOMAIN.cinematic * 0.45) this.spawnShrine();
-      if (z.t >= DOMAIN.cinematic) {
+      if (!void_ && !this.shrine && ct > span * 0.2) this.spawnShrine();
+      if (this.shrine && this.rise < 1) this.riseShrine(dt / (span * 0.45));
+      if (z.t >= z.cine) {
         z.phase = 'active'; z.t = 0;
         this.cinematic = false;
+        if (!void_) { this.cineDom(null); W.audio && W.audio.duck(false); }
         if (W.player) { W.player.state = 'idle'; W.player.inv = 0.3; }
         fx.ring(z.x, z.y, 0.5, z.r, 0.5, void_ ? 0xffffff : 0xff3030, 3);
         fx.shakeCam(6);
@@ -164,7 +196,7 @@ export class Domain {
       this.vig.id = 'shrinevig';
       document.body.appendChild(this.vig);
     }
-    const want = on && z && (z.phase === 'active' || z.phase === 'final' || z.t > DOMAIN.cinematic * 0.4);
+    const want = on && z && (z.phase === 'active' || z.phase === 'final' || z.t > z.t0 + 0.4);
     if (this.vig.classList.contains('on') !== !!want) this.vig.classList.toggle('on', !!want);
   }
 
@@ -217,9 +249,26 @@ export class Domain {
   spawnShrine() {
     const z = this.zone;
     const [ox, oy] = originOf('shrine');
-    this.shrine = this.scene.add.image(Math.round(isoX(z.x, z.y)), Math.round(isoY(z.x, z.y)), 'shrine').setOrigin(ox, oy).setDepth(depthOf(z.x, z.y) + 2);
-    W.fx.dust(z.x, z.y, 14, 3, 2);
+    // le sanctuaire se dresse juste derrière Sukuna pour qu'il reste visible au premier plan
+    const sx = z.x - 1.6, sy = z.y - 1.6;
+    this.shrine = this.scene.add.image(Math.round(isoX(sx, sy)), Math.round(isoY(sx, sy)), 'shrine').setOrigin(ox, oy).setDepth(depthOf(sx, sy) + 2);
+    this.shrinePos = [sx, sy, this.shrine.y];
+    this.rise = 0;
+    this.riseShrine(0);
+    W.fx.dust(sx, sy, 14, 3, 2);
     W.fx.shakeCam(8);
+    W.audio && W.audio.play('collapse');
+  }
+
+  // Le sanctuaire sort du sol : seule la partie déjà émergée est affichée.
+  riseShrine(dk) {
+    const im = this.shrine, [sx, sy, y0] = this.shrinePos;
+    this.rise = Math.min(1, this.rise + dk);
+    const k = 1 - (1 - this.rise) ** 2;
+    const h = im.height, vis = Math.max(1, Math.round(h * k));
+    im.setCrop(0, 0, im.width, vis).setY(y0 + (h - vis));
+    if (this.rise < 1) { if (Math.random() < 0.2) W.fx.dust(sx + rand(-1.2, 0.4), sy + rand(-1.2, 0.4), 1, 2, 0.6); W.fx.shakeCam(3); }
+    if (this.rise >= 1) { im.setCrop(); im.setY(y0); }
   }
 
   // Ligne de taillade purement visuelle (aucune requête de combat) : permet un déluge de coupes à bas coût.
@@ -310,6 +359,7 @@ export class Domain {
     if (this.shrine) { this.shrine.destroy(); this.shrine = null; }
     this.g.clear(); this.top.clear();
     if (this.vig) this.vig.classList.remove('on');
+    if (this.cineEl && this.cineEl.className) { this.cineDom(null); W.audio && W.audio.duck(false); }
   }
 
   clear() { this.end(); }

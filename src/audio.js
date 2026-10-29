@@ -1,6 +1,13 @@
 // Audio synthétisé (Web Audio) : effets sonores et musique d'action procédurale.
-// Si des fichiers sont déposés dans audio/ (music_menu.mp3, music_game.mp3), ils remplacent la musique synthétisée.
+// Si des fichiers sont déposés dans audio/ (music_menu.mp3, music_game.mp3), ils remplacent la musique synthétisée ;
+// ceux de audio/sfx/ remplacent les bruitages du même nom (voir README).
 import { settings } from './settings.js';
+
+// Seconde de départ de chaque musique fournie (la musique de combat commence à 50 s).
+const MUSIC_START = { menu: 0, game: 50 };
+// Bruitages remplaçables par un fichier audio/sfx/<nom>.mp3.
+const SFX_FILES = ['domain_sukuna', 'domain_gojo', 'ambience', 'slash', 'slashSoft', 'cleave', 'claw', 'shrineOn', 'shrineEnd',
+  'fireCharge', 'fireShot', 'bigBoom', 'explosion', 'punch', 'kick', 'heavy', 'whoosh', 'dash', 'hit', 'heavyHit'];
 
 export class Audio {
   constructor() {
@@ -44,6 +51,45 @@ export class Audio {
       try { const r = await fetch('audio/' + name, { method: 'HEAD' }); this.files[name] = r.ok; } catch (e) { this.files[name] = false; }
     }
     if (this.musicMode) this.startMusic(this.musicMode, true);
+    // bruitages fournis : audio/sfx/<nom>.mp3 remplace le son synthétisé du même nom
+    this.bufs = {};
+    await Promise.all(SFX_FILES.map(async (name) => {
+      try {
+        const r = await fetch('audio/sfx/' + name + '.mp3');
+        if (r.ok) this.bufs[name] = await this.ctx.decodeAudioData(await r.arrayBuffer());
+      } catch (e) { /* fichier absent : son synthétisé */ }
+    }));
+    if (this.musicMode === 'game') this.startAmbience();
+  }
+  has(name) { return !!(this.bufs && this.bufs[name]); }
+
+  // Joue un fichier décodé ; renvoie la source (pour l'arrêter) ou null.
+  playBuf(name, o = {}) {
+    const b = this.bufs && this.bufs[name];
+    if (!b || !this.ctx) return null;
+    const src = this.ctx.createBufferSource(); src.buffer = b; src.loop = !!o.loop;
+    src.playbackRate.value = o.rate || 1;
+    const g = this.ctx.createGain(); g.gain.value = o.gain ?? 1;
+    src.connect(g); g.connect(o.bus || this.sfx);
+    src.start();
+    return src;
+  }
+
+  // Ambiance de combat en boucle (audio/sfx/ambience.mp3), coupée pendant les cinématiques.
+  startAmbience() {
+    if (this.amb || !this.has('ambience')) return;
+    this.amb = this.playBuf('ambience', { loop: true, gain: 0.5 });
+  }
+  stopAmbience() { if (this.amb) { try { this.amb.stop(); } catch (e) { /* déjà arrêtée */ } this.amb = null; } }
+
+  // Cinématique : coupe la musique et l'ambiance, puis les rétablit.
+  duck(on) {
+    if (!this.ctx) return;
+    const s = settings();
+    this.music.gain.value = on ? 0 : s.music * 0.35;
+    if (this.el) this.el.volume = on ? 0 : s.music * 0.8;
+    this.sfx.gain.value = s.sfx * 0.9;
+    if (on) this.stopAmbience(); else if (this.musicMode === 'game') this.startAmbience();
   }
 
   // --- briques ---
@@ -72,6 +118,7 @@ export class Audio {
     const now = this.ctx.currentTime;
     if (this.last[name] && now - this.last[name] < 0.045) return;
     this.last[name] = now;
+    if (this.has(name)) { this.playBuf(name, { rate: 0.94 + Math.random() * 0.12 }); return; }
     const t = now + 0.005;
     const R = RECIPES[name];
     if (R) R(this, t);
@@ -83,11 +130,17 @@ export class Audio {
     this.stopMusic();
     this.musicMode = mode;
     if (!this.ctx) return;
+    if (mode === 'game') this.startAmbience(); else this.stopAmbience();
     const file = mode === 'menu' ? 'music_menu.mp3' : 'music_game.mp3';
     if (this.files[file]) {
-      this.el = new window.Audio('audio/' + file);
-      this.el.loop = true; this.el.volume = settings().music * 0.8;
-      this.el.play().catch(() => {});
+      // la musique de combat démarre (et reboucle) à MUSIC_START.game secondes
+      const start = MUSIC_START[mode] || 0;
+      const el = this.el = new window.Audio('audio/' + file);
+      el.volume = settings().music * 0.8;
+      el.loop = !start;
+      el.addEventListener('loadedmetadata', () => { if (start < el.duration) el.currentTime = start; }, { once: true });
+      el.addEventListener('ended', () => { el.currentTime = start; el.play().catch(() => {}); });
+      el.play().catch(() => {});
       return;
     }
     this.step = 0;

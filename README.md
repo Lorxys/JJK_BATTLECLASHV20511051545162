@@ -42,7 +42,13 @@ Sur ordinateur, pour les tests : ZQSD/WASD pour bouger, J pour attaquer, K pour 
 
 - Phaser 3 (inclus dans `vendor/`), JavaScript pur, aucune étape de compilation.
 - Tout le pixel art est généré par le code au lancement.
-- Les sons et la musique sont synthétisés. Pour utiliser tes propres musiques, dépose `music_menu.mp3` et `music_game.mp3` dans `audio/` : elles remplacent automatiquement la musique synthétisée.
+- Les sons et la musique sont synthétisés. Tu peux les remplacer par tes propres fichiers MP3 :
+  - `audio/music_menu.mp3` : musique du menu ;
+  - `audio/music_game.mp3` : musique de tout le combat. Elle démarre à 50 s et reboucle à 50 s (réglable dans `MUSIC_START`, `src/audio.js`) ;
+  - `audio/sfx/domain_sukuna.mp3` : voix « Ryōiki Tenkai… Fukuma Mizushi » jouée dès l'appui sur le domaine de Sukuna ; la musique et l'ambiance sont coupées pendant la cinématique (écran noir 1,8 s puis plan sur Sukuna jusqu'à 5,4 s, réglable dans `DOMAIN`, `src/config.js`) ;
+  - `audio/sfx/domain_gojo.mp3` : voix du domaine de Gojo ;
+  - `audio/sfx/ambience.mp3` : ambiance en boucle pendant le combat ;
+  - `audio/sfx/<nom>.mp3` remplace le bruitage du même nom : `slash`, `slashSoft` (déluge de taillades du Shrine), `cleave`, `claw`, `shrineOn`, `shrineEnd`, `fireCharge`, `fireShot`, `bigBoom`, `explosion`, `punch`, `kick`, `heavy`, `whoosh`, `dash`, `hit`, `heavyHit`.
 
 ```
 index.html, style.css      page et interface
