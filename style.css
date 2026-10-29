@@ -186,3 +186,6 @@ input[type=range] { pointer-events: auto; width: 100%; accent-color: var(--accen
 #dcine.black .bar, #dcine.black .cap { display: none; }
 #dcine:not(.black) .blk { display: none; }
 @keyframes dcineIn { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
+#dcine.void .blk .k { text-shadow: 4px 4px 0 #2a3a9a; }
+#dcine.void .blk .n { color: #9fc0ff; }
+#dcine.void .cap { color: #e4ecff; text-shadow: 3px 3px 0 #3d4bd8, 6px 6px 0 #000; }

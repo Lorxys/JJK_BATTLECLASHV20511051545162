@@ -28,34 +28,26 @@ export class Domain {
     const r = type === 'void' ? DOMAIN.voidRadius : DOMAIN.shrineRadius;
     // densité des effets proportionnelle à la surface (réf. rayon 12), plafonnée pour les mobiles
     const area = Math.min(4, (r / 12) ** 2);
-    const shrine = type === 'shrine';
-    const cine = shrine ? DOMAIN.shrineCinematic : DOMAIN.cinematic;
-    // Malevolent Shrine : écran noir puis plan sur Sukuna ; t0 = début de l'apparition du territoire
-    const t0 = shrine ? DOMAIN.shrineBlack : 0;
-    this.zone = { type, x: pl.x, y: pl.y, r, area, phase: 'cinematic', t: 0, cine, t0, slashT: 0, once: new Set(), onceB: new Set(), onceM: new Set(), waveR: 0 };
+    // cinématique : écran noir « 領域展開 » puis plan sur le lanceur ; t0 = début de l'apparition du territoire
+    const cine = type === 'shrine' ? DOMAIN.shrineCinematic : DOMAIN.voidCinematic;
+    this.zone = { type, x: pl.x, y: pl.y, r, area, phase: 'cinematic', t: 0, cine, t0: DOMAIN.black, slashT: 0, once: new Set(), onceB: new Set(), onceM: new Set(), waveR: 0 };
     this.cinematic = true;
     pl.state = 'cinematic'; pl.animT = 0; pl.inv = cine + 0.3;
-    const A = W.audio;
-    if (shrine) {
-      this.cineDom('black');
-      if (A) { A.duck(true); if (A.has('domain_sukuna')) A.playBuf('domain_sukuna'); else A.play('domain'); }
-      return;
-    }
-    W.ui && W.ui.domainTitle(type);
-    if (A) { if (A.has('domain_gojo')) A.playBuf('domain_gojo'); else A.play('domain'); }
-    W.fx.shakeCam(4);
+    this.cineDom('black', type);
+    if (W.audio) { W.audio.duck(true); W.audio.domainIntro(type); }
   }
 
-  // Couche DOM de la cinématique du Shrine : 'black' (écran noir + 領域展開), 'shot' (bandes cinéma + nom), null.
-  cineDom(mode) {
+  // Couche DOM de la cinématique : 'black' (écran noir + 領域展開), 'shot' (bandes cinéma + nom), null.
+  cineDom(mode, type = this.zone && this.zone.type) {
     if (!this.cineEl) {
       const el = this.cineEl = document.createElement('div');
       el.id = 'dcine';
-      el.innerHTML = '<div class="blk"><div class="k">領域展開</div><div class="n">RYŌIKI TENKAI</div></div><div class="bar t"></div><div class="bar b"></div><div class="cap">伏魔御廚子</div>';
+      el.innerHTML = '<div class="blk"><div class="k">領域展開</div><div class="n">RYŌIKI TENKAI</div></div><div class="bar t"></div><div class="bar b"></div><div class="cap"></div>';
       document.body.appendChild(el);
     }
     const el = this.cineEl;
-    el.className = mode ? 'on ' + mode : '';
+    el.className = mode ? 'on ' + mode + ' ' + type : '';
+    el.querySelector('.cap').textContent = type === 'void' ? '無量空処' : '伏魔御廚子';
     if (mode) { const c = el.querySelector(mode === 'black' ? '.k' : '.cap'); c.style.animation = 'none'; void c.offsetWidth; c.style.animation = ''; }
     const cam = this.scene.cameras.main;
     cam.setZoom(mode === 'shot' ? 2 : 1); // gros plan net (zoom entier)
@@ -80,15 +72,20 @@ export class Domain {
     if (z.phase === 'cinematic') {
       const ct = z.t - z.t0, span = z.cine - z.t0; // temps et durée du plan visible
       if (ct < 0) { this.draw(z, 0); return; } // écran noir : rien d'autre
-      if (!void_ && !z.shot) { z.shot = true; this.cineDom('shot'); fx.shakeCam(5); }
-      reveal = Math.min(1, ct / (span * (void_ ? 0.8 : 0.55)));
-      if (Math.random() < 0.5) fx.energy(z.x, z.y, 20, 3, void_ ? 0x9fd0ff : 0xff3030, 4, 0.6);
+      if (!z.shot) {
+        z.shot = true; this.cineDom('shot'); fx.shakeCam(5);
+        W.audio && W.audio.domainName(z.type);
+        if (void_) { fx.flash(z.x, z.y, 6); W.night && W.night.flash(z.x, z.y, 10, 0xcfe0ff, 0.6, 0.8); }
+      }
+      reveal = Math.min(1, ct / (span * (void_ ? 0.7 : 0.55)));
+      if (void_) this.voidOpening(dt, z, ct, span);
+      else if (Math.random() < 0.5) fx.energy(z.x, z.y, 20, 3, 0xff3030, 4, 0.6);
       if (!void_ && !this.shrine && ct > span * 0.2) this.spawnShrine();
       if (this.shrine && this.rise < 1) this.riseShrine(dt / (span * 0.45));
       if (z.t >= z.cine) {
         z.phase = 'active'; z.t = 0;
         this.cinematic = false;
-        if (!void_) { this.cineDom(null); W.audio && W.audio.duck(false); }
+        this.cineDom(null); W.audio && W.audio.duck(false);
         if (W.player) { W.player.state = 'idle'; W.player.inv = 0.3; }
         fx.ring(z.x, z.y, 0.5, z.r, 0.5, void_ ? 0xffffff : 0xff3030, 3);
         fx.shakeCam(6);
@@ -198,6 +195,28 @@ export class Domain {
     }
     const want = on && z && (z.phase === 'active' || z.phase === 'final' || z.t > z.t0 + 0.4);
     if (this.vig.classList.contains('on') !== !!want) this.vig.classList.toggle('on', !!want);
+  }
+
+  // Ouverture de l'Unlimited Void : flux d'étoiles qui jaillissent de Gojo, rayons d'information infinie,
+  // ondes successives, puis le cosmos qui remplit tout le territoire.
+  voidOpening(dt, z, ct, span) {
+    const fx = W.fx, k = ct / span;
+    for (let i = 0; i < 6; i++) {
+      const a = Math.random() * TAU, s = rand(5, 13);
+      fx.spawn('star', z.x + Math.cos(a) * 0.4, z.y + Math.sin(a) * 0.4, rand(8, 34), Math.cos(a) * s, Math.sin(a) * s, rand(-10, 10), rand(0.5, 1.1),
+        { tint: Math.random() < 0.35 ? 0x9fd0ff : 0xffffff, add: true });
+    }
+    for (let i = 0; i < 3; i++) {
+      const a = Math.random() * TAU, r0 = rand(0.5, 2), r1 = r0 + rand(2, 6) * (0.4 + k);
+      fx.beam(z.x + Math.cos(a) * r0, z.y + Math.sin(a) * r0, rand(10, 36), z.x + Math.cos(a) * r1, z.y + Math.sin(a) * r1, rand(4, 40), rand(0.06, 0.14), Math.random() < 0.5 ? 0xffffff : 0x8fb0ff, 1);
+    }
+    z.waveT = (z.waveT || 0) - dt;
+    if (z.waveT <= 0) { z.waveT = 0.45; fx.ring(z.x, z.y, 0.3, z.r * Math.min(1, 0.35 + k), 0.6, 0xcfe0ff, 2); W.audio && W.audio.play('voidPulse'); }
+    if (k > 0.45) for (let i = 0; i < 3 * z.area; i++) {
+      const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * z.r * Math.min(1, k * 1.2);
+      fx.spawn('star', z.x + Math.cos(a) * d, z.y + Math.sin(a) * d, rand(0, 60), 0, 0, rand(-3, 3), rand(0.6, 1.4), { tint: Math.random() < 0.3 ? 0x9fd0ff : 0xffffff, add: true });
+    }
+    if (W.night) W.night.add(z.x, z.y, 3 + z.r * k, 0x8fb0ff, 0.3, 0.4);
   }
 
   voidActive(dt, z) {

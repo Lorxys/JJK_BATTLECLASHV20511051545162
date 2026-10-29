@@ -43,8 +43,8 @@ export const DOMAIN = {
   duration: 25,
   voidRadius: 18,       // 1,5x la taille de base (12)
   shrineRadius: 36,     // 3x la taille de base (12)
-  cinematic: 2.6,       // Unlimited Void
-  shrineBlack: 1.8,     // Malevolent Shrine : écran noir « 領域展開 »
+  black: 1.8,           // écran noir « 領域展開 » au lancement d'un territoire
+  voidCinematic: 5.0,   // Unlimited Void : durée totale (écran noir + plan sur Gojo)
   shrineCinematic: 5.4, // Malevolent Shrine : durée totale (écran noir + plan sur Sukuna)
   voidCooldown: 75,
   shrineCooldown: 80,

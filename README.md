@@ -46,8 +46,8 @@ Sur ordinateur, pour les tests : ZQSD/WASD pour bouger, J pour attaquer, K pour 
   - `audio/music_menu.mp3` : musique du menu ;
   - `audio/music_game.mp3` : musique de tout le combat. Elle démarre à 50 s et reboucle à 50 s (réglable dans `MUSIC_START`, `src/audio.js`) ;
   - `audio/sfx/domain_sukuna.mp3` : voix « Ryōiki Tenkai… Fukuma Mizushi » jouée dès l'appui sur le domaine de Sukuna ; la musique et l'ambiance sont coupées pendant la cinématique (écran noir 1,8 s puis plan sur Sukuna jusqu'à 5,4 s, réglable dans `DOMAIN`, `src/config.js`) ;
-  - `audio/sfx/domain_gojo.mp3` : voix du domaine de Gojo ;
-  - `audio/sfx/ambience.mp3` : ambiance en boucle pendant le combat ;
+  - `audio/sfx/domain_gojo.mp3` : voix du domaine de Gojo. Sans fichier, le jeu fait dire « Ryōiki tenkai » puis le nom du territoire par la synthèse vocale japonaise de l'appareil (si elle est installée), avec une intro sonore synthétisée ;
+  - `audio/sfx/ambience.mp3` : ambiance en boucle pendant le combat (sinon : vent, sirènes, grondements et crépitement des incendies synthétisés) ;
   - `audio/sfx/<nom>.mp3` remplace le bruitage du même nom : `slash`, `slashSoft` (déluge de taillades du Shrine), `cleave`, `claw`, `shrineOn`, `shrineEnd`, `fireCharge`, `fireShot`, `bigBoom`, `explosion`, `punch`, `kick`, `heavy`, `whoosh`, `dash`, `hit`, `heavyHit`.
 
 ```
