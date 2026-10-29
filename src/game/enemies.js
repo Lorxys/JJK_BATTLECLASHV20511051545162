@@ -4,6 +4,7 @@ import { isoX, isoY, depthOf, rand, norm, screenDir, TAU } from '../util.js';
 import { ART } from '../gfx/registry.js';
 import { QUALITY } from '../config.js';
 import { settings } from '../settings.js';
+import { CHAR_TINT, nightMul } from './night.js';
 
 export const EDEF = {
   larve: { sheet: 'larve', hp: 15, speed: 2.8, r: 0.3, range: 0.9, windup: 0.3, cd: 1.1, mass: 0.5, shadow: 'shadow_s', h: 14 },
@@ -106,7 +107,7 @@ export class Enemies {
 
   // Dégâts de zone sans recul (flammes au sol).
   burn(x, y, r, dmg) {
-    for (const e of this.list) if (!e.dead && (e.x - x) ** 2 + (e.y - y) ** 2 < (r + e.def.r) ** 2) { e.hp -= dmg; e.flash = 0.05; if (e.hp <= 0) e.die(); }
+    for (const e of this.list) if (!e.dead && (e.x - x) ** 2 + (e.y - y) ** 2 < (r + e.def.r) ** 2) { e.hp -= dmg; if (Math.random() < 0.02) e.flash = 0.04; if (e.hp <= 0) e.die(); }
   }
 
   // Un objet projeté (voiture, conteneur...) percute les fléaux.
@@ -480,8 +481,8 @@ export class Enemies {
     if (e.flash > 0) e.sprite.setTintFill(0xffffff);
     else if (e.frozen) e.sprite.setTint(e.frozen === 'shrine' ? (Math.random() < 0.5 ? 0xff3030 : 0xff7070) : 0x9fb0ff);
     else if (st === 'stunned') e.sprite.setTint(Math.floor(e.animT * 8) % 2 ? 0xffe14a : 0xffffff);
-    else if (e.rage) e.sprite.setTint(0xffb0b0);
-    else e.sprite.clearTint();
+    else if (e.rage) e.sprite.setTint(nightMul(0xffb0b0, CHAR_TINT));
+    else e.sprite.setTint(CHAR_TINT);
     const map = { move: 'run', idle: 'idle', windup: 'attack', strike: 'attack', recover: 'idle', hit: 'hit', down: 'down', stunned: 'hit',
       frozen: 'hit', spawn: 'idle', lift: 'cast', crouch: 'attack', lunge: 'attack', volley: 'cast', cast: 'cast', vanish: 'idle' };
     let name = map[st] || 'idle';

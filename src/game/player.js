@@ -4,6 +4,7 @@ import { KITS } from '../config.js';
 import { isoX, isoY, depthOf, rand, norm, screenDir, TAU } from '../util.js';
 import { ART } from '../gfx/registry.js';
 import { settings } from '../settings.js';
+import { CHAR_TINT } from './night.js';
 
 const COMBOS = {
   gojo: [
@@ -20,8 +21,9 @@ const COMBOS = {
   ],
 };
 const BLINK_RANGE = 8; // distance max de la téléportation automatique vers un fléau
-const FUGA_RADIUS = 21.5; // rayon d'explosion de la Flèche de feu (5 x 4,3)
-const FUGA_CHARGE = 1.8; // durée de la pose de charge de la Flèche de feu
+const FUGA_RADIUS = 21.5; // rayon d'explosion du Fuga (5 x 4,3)
+const FUGA_CHARGE = 1.8; // durée de la pose de charge du Fuga
+const FUGA_BURN = 30; // durée du brasier laissé par le Fuga (s)
 const AIM_RANGE = { blue: 6, red: 9, purple: 12, dismantle: 9, cleave: 4, fuga: 14 }; // portée de l'aide à la visée
 
 export class Player {
@@ -401,7 +403,7 @@ export class Player {
     this.shadow.setPosition(X, Y).setVisible(settings().shadows);
     if (this.flash > 0) { this.flash -= 1 / 60; this.sprite.setTintFill(0xffffff); }
     else if (this.inv > 0.05 && (this.state === 'dash' || this.state === 'dodge')) this.sprite.setTint(this.key === 'gojo' ? 0xcfe6ff : 0xffd0d0);
-    else this.sprite.clearTint();
+    else this.sprite.setTint(CHAR_TINT);
   }
 
   destroy() {
@@ -414,7 +416,13 @@ export class Player {
 const handPos = (pl, d = 0.6) => [pl.x + pl.face[0] * d, pl.y + pl.face[1] * d];
 
 function img(key, scale = 1) { return W.scene.add.image(0, 0, key).setScale(scale).setBlendMode(0); }
-function placeImg(im, x, y, z) { im.setPosition(Math.round(isoX(x, y)), Math.round(isoY(x, y) - z)).setDepth(depthOf(x, y) + 6); }
+// Lumière émise la nuit par les orbes et projectiles : [couleur, rayon].
+const ORB_LIGHT = { orb_blue: [0x3d8bff, 3.5], orb_red: [0xff3b3b, 3.5], orb_purple: [0xa24bff, 6], fire_arrow: [0xff8a1e, 5] };
+function placeImg(im, x, y, z) {
+  im.setPosition(Math.round(isoX(x, y)), Math.round(isoY(x, y) - z)).setDepth(depthOf(x, y) + 6);
+  const l = ORB_LIGHT[im.texture.key];
+  if (l && W.night) W.night.add(x, y, l[1] * (im.scaleX || 1), l[0], 0.42, 0.6);
+}
 
 const POWERS = {
   // ---------------- Gojo ----------------
@@ -674,7 +682,7 @@ const POWERS = {
           }
           ringT -= dt;
           if (ringT <= 0) { ringT = 0.3 - k * 0.18; fx.ring(pl.x, pl.y, 0.4, 2.4 + k * 1.5, 0.4, k > 0.7 ? 0xffe070 : 0xff8a1e, 2, { top: false }); }
-          // la flèche de feu se forme dans la main
+          // la flèche du Fuga se forme dans la main
           held.setVisible(true).setScale(Math.round((0.3 + k * 0.9 + Math.sin(t * 40) * 0.06) * 8) / 8);
           const [sx, sy] = screenDir(aim[0], aim[1]);
           held.setRotation(Math.atan2(sy, sx));
@@ -764,7 +772,7 @@ function fusePurple(pl, blue, dir) {
   launchPurple(pl, blue.x, blue.y, dir, 1.8);
 }
 
-// Explosion géante de la Flèche de feu : rayon de 21,5 cases, brasier et pluie de flammes.
+// Explosion géante du Fuga : rayon de 21,5 cases, brasier et pluie de flammes.
 function fugaExplosion(pl, x, y) {
   const fx = W.fx, R = FUGA_RADIUS;
   W.combat.area(x, y, R, { dmg: 230, force: 17, lift: 280, stun: 1, bld: 1300, mov: 300, heavy: true, src: 'fire' });
@@ -781,6 +789,13 @@ function fugaExplosion(pl, x, y) {
     W.city.addFire(x + Math.cos(a) * r, y + Math.sin(a) * r, rand(0.7, 1.3), rand(6, 12));
     if (i < 30) W.ground.scorch(x + Math.cos(a) * r, y + Math.sin(a) * r, rand(1, 3));
   }
+  // la zone reste irradiée et incendiée : sol calciné partout, brasier persistant et pluie de cendres
+  for (let i = 0; i < 90; i++) {
+    const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * R;
+    W.ground.scorch(x + Math.cos(a) * r, y + Math.sin(a) * r, rand(1.5, 3.2));
+    if (i % 6 === 0) W.ground.crack(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  W.city.addInferno(x, y, R, FUGA_BURN);
   fx.shakeCam(14); fx.hitstop(0.12); fx.slowmo(0.4, 0.25);
   W.audio.play('bigBoom');
   // vague de flammes qui déferle vers l'extérieur + cascade d'explosions + pluie de feu persistante

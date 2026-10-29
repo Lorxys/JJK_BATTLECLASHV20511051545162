@@ -79,6 +79,14 @@ function crackSet(seed, n, s, h) {
   return set;
 }
 
+// Fenêtres allumées la nuit (calque séparé, non assombri).
+let glowPB = null, glowSrc = null, glowN = 0;
+const GLOW = { warm: C('#ffd27a'), warmL: C('#ffe9b0'), cool: C('#cfe4ff'), amber: C('#e8a848') };
+function addGlow(x, y, src, c) {
+  if (!glowPB || x < 0 || y < 0 || x >= glowPB.w || y >= glowPB.h) return;
+  glowPB.d[y * glowPB.w + x] = c; glowSrc[y * glowPB.w + x] = src; glowN++;
+}
+
 export function drawBuilding(key, state) {
   const spec = VARIANTS[key];
   const s = spec.s, H = spec.h;
@@ -97,13 +105,21 @@ export function drawBuilding(key, state) {
     pb.outline(OUTLINE);
     return { canvas: pb.toCanvas(), ox: gx, oy: gy };
   }
+  glowPB = new PB(w, h); glowSrc = new Uint32Array(w * h); glowN = 0;
   if (spec.style === 'tank') drawTank(pb, spec, gx, gy, state, rng);
   else if (spec.style === 'crane') drawCrane(pb, spec, gx, gy, state);
   else if (spec.style === 'monument') drawMonument(pb, spec, gx, gy, state);
   else if (spec.style === 'fountain') drawFountain(pb, spec, gx, gy, state);
   else drawBox(pb, spec, key, gx, gy, state, rng, roofH);
   pb.outline(OUTLINE);
-  return { canvas: pb.toCanvas(), ox: gx, oy: gy };
+  // calque lumineux de nuit : ne garde que les fenêtres restées visibles (pas couvertes par le toit)
+  let glow = null;
+  if (glowN) {
+    for (let i = 0; i < glowSrc.length; i++) if (glowSrc[i] && pb.d[i] !== glowSrc[i]) glowPB.d[i] = 0;
+    glow = glowPB.toCanvas();
+  }
+  glowPB = glowSrc = null;
+  return { canvas: pb.toCanvas(), ox: gx, oy: gy, glow };
 }
 
 function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
@@ -122,9 +138,9 @@ function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
   const cutBase = H * 0.52;
   const cut = (f, u) => cutBase + Math.sin(u * 0.35 + (f === 'L' ? 0 : 2)) * 4 + hash2(u >> 2, f === 'L' ? 1 : 2, 9) * 9;
 
-  let isWin = false, winId = 0;
+  let isWin = false, isNeon = false, winId = 0;
   const pattern = (f, u, v) => {
-    isWin = false;
+    isWin = false; isNeon = false;
     const lit = f === 'R';
     const base = lit ? wall : shadeC(wall, 0.8);
     switch (spec.style) {
@@ -179,8 +195,8 @@ function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
           return v > 9 ? C('#fff3c4') : (lit ? C('#ffe9a6') : C('#e3c889'));
         }
         if (v < 18) return ((u >> 2) % 2) ? neon : C('#fafafa'); // auvent rayé
-        if (big && v > H - 18 && v < H - 4) return lit ? shadeC(neon, 0.9) : shadeC(neon, 0.7);
-        if (f === 'R' && !big && u > fw - 12 && u < fw - 3 && v > 22 && v < H - 4) return neon; // enseigne verticale
+        if (big && v > H - 18 && v < H - 4) { isNeon = true; return lit ? shadeC(neon, 0.9) : shadeC(neon, 0.7); }
+        if (f === 'R' && !big && u > fw - 12 && u < fw - 3 && v > 22 && v < H - 4) { isNeon = true; return neon; } // enseigne verticale
         const fh = 11;
         if (v % fh >= 4 && v % fh <= 8 && u % 8 >= 2 && u % 8 <= 6) { isWin = true; winId = (u >> 3) * 31 + (v / fh | 0); return lit ? COL.win : COL.winD; }
         return base;
@@ -194,7 +210,7 @@ function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
     return base;
   };
 
-  const face = (f) => (u, v) => {
+  const face = (f) => (u, v, x, y) => {
     if (v < 0) return 0;
     if (state >= 3) {
       const c = cut(f, u);
@@ -214,6 +230,15 @@ function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
       const d = Math.hypot(u - ho.u, (v - ho.v) * 1.3);
       if (d < ho.r) return (v % 10 === 0) ? COL.slab : COL.interior;
       if (d < ho.r + 1.5) return COL.rubble[(u + v) % 3];
+    }
+    if (isNeon) addGlow(x, y, col, col);
+    else if (isWin) {
+      const st = spec.style;
+      const p = st === 'shop' || st === 'mall' ? (v < 14 ? 1 : 0.5) : st === 'glass' ? 0.3 : st === 'factory' ? 0.55 : 0.42;
+      if (col === COL.lit || hash2(winId, f === 'L' ? 11 : 13, 1) < p) {
+        const cool = hash2(winId, 17, 2) < 0.22;
+        addGlow(x, y, col, col === C('#f4f0e6') ? GLOW.amber : cool ? GLOW.cool : (v % 3 ? GLOW.warm : GLOW.warmL));
+      }
     }
     return col;
   };

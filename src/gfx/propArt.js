@@ -41,6 +41,7 @@ function street() {
   pb.rect(6, 4, 6, 2, pole); pb.rect(9, 6, 4, 2, C('#fff2b0'));
   pb.rect(5, 35, 4, 2, C('#3d4048'));
   put('lamp', pb, 7, 36);
+  pb = new PB(14, 38); pb.rect(9, 6, 4, 2, C('#fff6c8')); pb.rect(10, 8, 2, 1, C('#ffd27a')); put('lamp_glow', pb, 7, 36, false); // ampoule allumée la nuit
   pb = new PB(30, 14);
   pb.rect(13, 6, 3, 6, pole); pb.line(15, 10, 27, 12, pole, 2); pb.rect(26, 11, 3, 2, C('#fff2b0'));
   put('lamp_b', pb, 14, 11);
@@ -236,7 +237,7 @@ function fx() {
   orb('orb_purple', 16, '#f6e8ff', '#a24bff', '#3a1070');
   orb('orb_curse', 4, '#e0b0ff', '#5a1a7a', '#1b0a24');
   orb('orb_curse_big', 7, '#ffb0d0', '#8a1a4a', '#2a0a14');
-  // flèche de feu
+  // flèche du Fuga
   pb = new PB(30, 11);
   for (let x = 0; x < 30; x++) {
     const half = x > 22 ? Math.round((30 - x) * 0.6) : Math.max(1, Math.round(x * 0.18));

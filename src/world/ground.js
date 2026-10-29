@@ -2,6 +2,7 @@
 import { CHUNK } from '../config.js';
 import { W } from '../state.js';
 import { isoX, isoY, makeRng } from '../util.js';
+import { NIGHT_TINT } from '../game/night.js';
 import { makeTileSet, tileFor, makeCrater, makeScorch, makeCrackStamp, DMG_COLORS } from '../gfx/tiles.js';
 
 let tileSet = null;
@@ -34,7 +35,7 @@ export class Ground {
           canvas.width = CHUNK * 32; canvas.height = CHUNK * 16;
           tex = scene.textures.addCanvas(key, canvas);
         } else canvas = tex.getSourceImage();
-        const img = scene.add.image(left, top, key).setOrigin(0, 0).setDepth(-1e6);
+        const img = scene.add.image(left, top, key).setOrigin(0, 0).setDepth(-1e6).setTint(NIGHT_TINT);
         this.chunks.push({ cx, cy, left, top, w: canvas.width, h: canvas.height, canvas, ctx: canvas.getContext('2d'), tex, img, dirty: false });
       }
     }

@@ -35,7 +35,7 @@ Sur ordinateur, pour les tests : ZQSD/WASD pour bouger, J pour attaquer, K pour 
 - **Ryomen Sukuna :**
   - Démantèlement : taillades à distance ;
   - Clivage : coup puissant à courte portée ;
-  - Flèche de feu ;
+  - Fuga ;
   - Extension du territoire : Malevolent Shrine.
 
 ## Technique

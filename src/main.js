@@ -29,7 +29,7 @@ function boot() {
     type: Phaser.AUTO,
     parent: 'game',
     width: w, height: h,
-    backgroundColor: '#3d7fc4',
+    backgroundColor: '#0b1430',
     pixelArt: true, roundPixels: true, antialias: false,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { keyboard: false, mouse: false, touch: false, gamepad: false },

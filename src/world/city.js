@@ -1,10 +1,11 @@
 // Ville vivante : bâtiments destructibles par états, mobilier cassable, véhicules et objets projetables.
 import { W } from '../state.js';
-import { isoX, isoY, depthOf, rand, clamp } from '../util.js';
+import { isoX, isoY, depthOf, rand, clamp, TAU } from '../util.js';
 import { WALKABLE, T } from './citygen.js';
 import { VARIANTS, buildingHp } from '../gfx/buildingArt.js';
 import { buildingTex, originOf, ART } from '../gfx/registry.js';
 import { settings } from '../settings.js';
+import { NIGHT_TINT } from '../game/night.js';
 
 const BROKEN = {
   tree_round: 'stump', tree_cherry: 'stump', tree_pine: 'stump', bush: 'bush_b', lamp: 'lamp_b', hydrant: 'hydrant_b',
@@ -30,17 +31,23 @@ export class City {
       const spec = VARIANTS[d.variant];
       const key = buildingTex(d.variant, 0);
       const a = ART.anchors[key];
-      const img = scene.add.image(isoX(d.x, d.y) - a.ox, isoY(d.x, d.y) - a.oy, key).setOrigin(0, 0);
+      const img = scene.add.image(isoX(d.x, d.y) - a.ox, isoY(d.x, d.y) - a.oy, key).setOrigin(0, 0).setTint(NIGHT_TINT);
       const depth = (d.x + d.y + d.s - 0.15) * 16;
       img.setDepth(depth);
       for (let j = 0; j < d.s; j++) for (let k = 0; k < d.s; k++) this.cellB[(d.y + j) * N + d.x + k] = i;
       const hp = buildingHp(d.variant);
-      return { id: i, x: d.x, y: d.y, s: d.s, variant: d.variant, spec, hp, max: hp, state: 0, img, depth, collapse: 0, cx: d.x + d.s / 2, cy: d.y + d.s / 2, smokeT: 0 };
+      // vitrines : flaque de lumière chaude devant le magasin
+      const glowPool = spec.style === 'shop' || spec.style === 'mall' ? 0xffd890 : 0;
+      const b = { id: i, x: d.x, y: d.y, s: d.s, variant: d.variant, spec, hp, max: hp, state: 0, img, glow: null, glowPool, depth, collapse: 0, cx: d.x + d.s / 2, cy: d.y + d.s / 2, smokeT: 0, burnT: 0 };
+      this.setBuildingTex(b, key);
+      return b;
     });
     this.props = map.props.map((d) => {
       const [ox, oy] = originOf(d.type);
-      const img = scene.add.image(Math.round(isoX(d.x, d.y)), Math.round(isoY(d.x, d.y)), d.type).setOrigin(ox, oy).setDepth(depthOf(d.x, d.y));
-      return { x: d.x, y: d.y, type: d.type, img, broken: false, spray: 0 };
+      const x = Math.round(isoX(d.x, d.y)), y = Math.round(isoY(d.x, d.y));
+      const img = scene.add.image(x, y, d.type).setOrigin(ox, oy).setDepth(depthOf(d.x, d.y)).setTint(NIGHT_TINT);
+      const glow = d.type === 'lamp' ? scene.add.image(x, y, 'lamp_glow').setOrigin(ox, oy).setDepth(depthOf(d.x, d.y) + 0.01) : null;
+      return { x: d.x, y: d.y, type: d.type, img, glow, broken: false, spray: 0 };
     });
     this.propGrid = new Map();
     for (const p of this.props) {
@@ -51,6 +58,7 @@ export class City {
     this.movables = map.movables.map((d) => this.makeMovable(d));
     this.explodeQueue = [];
     this.fires = [];
+    this.infernos = [];
     this.cullT = 0;
     this.mgrid = new Map();
     this.shadows = settings().shadows;
@@ -61,7 +69,7 @@ export class City {
     const key = `${d.type}_${d.color % 6}_${d.orient}`;
     const [ox, oy] = originOf(key);
     const shadow = this.scene.add.image(0, 0, d.type === 'vending' ? 'shadow_s' : 'shadow_m').setDepth(-8e5).setVisible(false);
-    const img = this.scene.add.image(0, 0, key).setOrigin(ox, oy);
+    const img = this.scene.add.image(0, 0, key).setOrigin(ox, oy).setTint(NIGHT_TINT);
     const m = { ...d, def, x: d.x, y: d.y, z: 0, vx: 0, vy: 0, vz: 0, hp: def.hp, wreck: false, img, shadow, sleep: true, spinT: 0, burn: 0, held: false, thrower: null, hitSet: null };
     this.placeMovable(m);
     return m;
@@ -136,7 +144,7 @@ export class City {
     W.chaos && W.chaos.addDestruction(ns - prev);
     if (ns >= 4) { this.startCollapse(b); return; }
     b.state = ns;
-    b.img.setTexture(buildingTex(b.variant, ns));
+    this.setBuildingTex(b, buildingTex(b.variant, ns));
     if (fx) {
       fx.dust(b.cx, b.cy, 4 + b.s * 2, 2, b.s * 0.4);
       if (ns >= 2) fx.debris(b.cx, b.cy, b.spec.h * 0.5, 6 + b.s, b.spec.style === 'glass' ? 'glass' : 'concrete', 1.2);
@@ -152,7 +160,8 @@ export class City {
   startCollapse(b) {
     b.collapse = 0.001;
     b.state = 3;
-    b.img.setTexture(buildingTex(b.variant, 3));
+    this.setBuildingTex(b, buildingTex(b.variant, 3));
+    b.glowOn = false; if (b.glow) b.glow.setVisible(false); // effondrement : plus de lumière
     const fx = W.fx;
     if (fx) {
       fx.shakeCam(5 + b.s);
@@ -166,7 +175,8 @@ export class City {
     b.state = 4;
     const key = buildingTex(b.variant, 4);
     const a = ART.anchors[key];
-    b.img.setTexture(key).setCrop().setPosition(isoX(b.x, b.y) - a.ox, isoY(b.x, b.y) - a.oy);
+    this.setBuildingTex(b, key);
+    b.img.setCrop().setPosition(isoX(b.x, b.y) - a.ox, isoY(b.x, b.y) - a.oy);
     b.img.setDepth((b.x + b.y) * 16 + 2);
     W.flow && (W.flow.dirty = true);
     const fx = W.fx;
@@ -180,10 +190,21 @@ export class City {
     b.smokeT = 6;
   }
 
+  // Texture du bâtiment + son calque de fenêtres allumées (non assombri par la nuit).
+  setBuildingTex(b, key) {
+    b.img.setTexture(key);
+    const gk = key + '_glow';
+    b.glowOn = !!ART.anchors[gk];
+    if (!b.glowOn) { if (b.glow) b.glow.setVisible(false); return; }
+    if (!b.glow) b.glow = this.scene.add.image(b.img.x, b.img.y, gk).setOrigin(0, 0).setDepth(b.depth + 0.01);
+    else b.glow.setTexture(gk).setVisible(b.img.visible);
+  }
+
   // --- Mobilier ---
   breakProp(p, force = 1) {
     if (p.broken) return;
     p.broken = true;
+    if (p.glow) { p.glow.destroy(); p.glow = null; }
     const b = BROKEN[p.type];
     if (b) { const [ox, oy] = originOf(b); p.img.setTexture(b).setOrigin(ox, oy); }
     else p.img.setVisible(false);
@@ -339,7 +360,7 @@ export class City {
     }
   }
 
-  // Zone en feu qui brûle les fléaux (Flèche de feu).
+  // Zone en feu qui brûle les fléaux (Fuga).
   addFire(x, y, r, dur) { this.fires.push({ x, y, r, t: dur }); }
 
   update(dt, cam) {
@@ -371,7 +392,60 @@ export class City {
       if (W.fx && Math.random() < dt * 10) W.fx.flames(f.x, f.y, 1, f.r * 0.7);
       if (W.enemies) W.enemies.burn(f.x, f.y, f.r, 18 * dt);
     }
+    this.updateInfernos(dt, cam);
     this.cull(cam, dt);
+  }
+
+  // Brasier laissé par le Fuga : sol irradié, incendie, fumée, cendres qui tombent, bâtiments en flammes.
+  addInferno(x, y, r, dur) {
+    const spots = [];
+    for (let i = 0; i < 14; i++) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r * 0.9; spots.push([x + Math.cos(a) * d, y + Math.sin(a) * d, rand(0, TAU)]); }
+    this.infernos.push({ x, y, r, t: dur, max: dur, spots });
+    for (const b of this.buildings) if (b.state < 4 && Math.hypot(b.cx - x, b.cy - y) < r + b.s / 2) b.burnT = Math.max(b.burnT, dur * rand(0.6, 1));
+  }
+
+  updateInfernos(dt, cam) {
+    const fx = W.fx;
+    if (!fx) return;
+    const qk = W.quality === 'low' ? 0.5 : W.quality === 'high' ? 1.2 : 0.8;
+    const v = cam.worldView;
+    for (let i = this.infernos.length - 1; i >= 0; i--) {
+      const z = this.infernos[i];
+      z.t -= dt;
+      if (z.t <= 0) { this.infernos.splice(i, 1); continue; }
+      const k = Math.min(1, z.t / 6); // s'éteint pendant les 6 dernières secondes
+      const pick = (s = 1) => { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * z.r * s; return [z.x + Math.cos(a) * d, z.y + Math.sin(a) * d]; };
+      // flammes au sol et braises qui s'élèvent
+      for (let n = rate(dt * 22 * k * qk); n > 0; n--) { const [x, y] = pick(0.95); fx.flames(x, y, 1, 0.4); }
+      for (let n = rate(dt * 26 * k * qk); n > 0; n--) {
+        const [x, y] = pick();
+        fx.spawn('px1', x, y, rand(0, 8), rand(-0.3, 0.3), rand(-0.3, 0.3), rand(30, 80), rand(0.8, 1.6), { tint: Math.random() < 0.6 ? 0xffb040 : 0xff5020, add: true, raw: true });
+      }
+      for (let n = rate(dt * 1.2 * k * qk); n > 0; n--) { const [x, y] = pick(0.9); fx.smoke(x, y, 16, 1); }
+      // cendres : tombent du ciel sur la partie visible de la zone (et un peu au-delà)
+      for (let n = rate(dt * 45 * qk * (0.4 + 0.6 * k)); n > 0; n--) {
+        const sx = v.x + Math.random() * v.width, sy = v.y + Math.random() * v.height + 40;
+        const x = (sx / 16 + sy / 8) / 2, y = (sy / 8 - sx / 16) / 2;
+        if (Math.hypot(x - z.x, y - z.y) > z.r * 1.3) continue;
+        const r = Math.random();
+        fx.spawn(r < 0.75 ? 'px1' : 'px2', x, y, rand(60, 120), rand(0.15, 0.45), rand(-0.1, 0.2), -rand(18, 32), rand(2.6, 3.8),
+          { tint: r < 0.4 ? 0xb8aea4 : r < 0.75 ? 0x8a8079 : r < 0.92 ? 0x55504c : 0xff8a3a, g: 1, raw: r >= 0.92, add: r >= 0.92 });
+      }
+      // le sol irradié brûle les fléaux qui y restent
+      if (W.enemies) W.enemies.burn(z.x, z.y, z.r, 8 * dt * k);
+    }
+    // bâtiments incendiés : flammes sur la façade et le toit, fumée noire, lente dégradation
+    for (const b of this.buildings) {
+      if (b.burnT <= 0) continue;
+      b.burnT -= dt;
+      if (b.state >= 4) { b.burnT = 0; continue; }
+      if (b.img.visible) {
+        const h = b.spec.h * (b.state >= 3 ? 0.5 : 1);
+        if (Math.random() < dt * 8 * qk) fx.flames(b.cx + rand(-b.s / 2, b.s / 2), b.cy + rand(-b.s / 2, b.s / 2), 1, 0.3, rand(0, h));
+        if (Math.random() < dt * 1.5 * qk) fx.smoke(b.cx + rand(-b.s / 3, b.s / 3), b.cy + rand(-b.s / 3, b.s / 3), h, 1);
+      }
+      this.damageBuilding(b, 18 * dt, b.cx, b.cy);
+    }
   }
 
   // Masque ce qui est hors champ et rend translucides les bâtiments qui cachent le joueur.
@@ -384,18 +458,18 @@ export class City {
       const im = b.img;
       const a = ART.anchors[im.texture.key];
       const vis = !(im.x + a.w < x0 || im.x > x1 || im.y + a.h < y0 || im.y > y1);
-      if (im.visible !== vis) im.setVisible(vis);
+      if (im.visible !== vis) { im.setVisible(vis); if (b.glow && b.glowOn) b.glow.setVisible(vis); }
       if (!vis) continue;
       let alpha = 1;
       if (pl && b.state < 4 && b.depth > pd && px > im.x + 4 && px < im.x + a.w - 4 && py > im.y && py < im.y + a.h - b.s * 6) alpha = 0.38;
-      if (im.alpha !== alpha) im.setAlpha(alpha);
+      if (im.alpha !== alpha) { im.setAlpha(alpha); if (b.glow) b.glow.setAlpha(alpha); }
     }
     this.cullT -= dt;
     if (this.cullT > 0) return;
     this.cullT = 0.12;
     for (const p of this.props) {
       const vis = (p.img.x > x0 && p.img.x < x1 && p.img.y > y0 && p.img.y < y1 + 30) && !(p.broken && !BROKEN[p.type]);
-      if (p.img.visible !== vis) p.img.setVisible(vis);
+      if (p.img.visible !== vis) { p.img.setVisible(vis); if (p.glow) p.glow.setVisible(vis); }
     }
     for (const mv of this.movables) {
       const vis = mv.img.x > x0 && mv.img.x < x1 && mv.img.y > y0 && mv.img.y < y1 + 30;
@@ -404,9 +478,12 @@ export class City {
   }
 
   destroy() {
-    for (const b of this.buildings) b.img.destroy();
-    for (const p of this.props) p.img.destroy();
+    for (const b of this.buildings) { b.img.destroy(); if (b.glow) b.glow.destroy(); }
+    for (const p of this.props) { p.img.destroy(); if (p.glow) p.glow.destroy(); }
     for (const m of this.movables) { m.img.destroy(); m.shadow.destroy(); }
     this.buildings = []; this.props = []; this.movables = [];
   }
 }
+
+// Nombre d'apparitions pour un débit fractionnaire (ex. 0,3 -> 1 fois sur 3 environ).
+function rate(x) { return Math.floor(x) + (Math.random() < x % 1 ? 1 : 0); }

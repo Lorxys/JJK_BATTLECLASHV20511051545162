@@ -57,7 +57,7 @@ export const KITS = {
     speed: 4.6,
     powers: [
       { id: 'blue', name: 'Bleu', kanji: '蒼', cd: 5, color: '#3d8bff' },
-      { id: 'red', name: 'Rouge', kanji: '赫', cd: 5, color: '#ff3b3b' },
+      { id: 'red', name: 'Rouge', kanji: '赫', cd: 2.5, color: '#ff3b3b' },
       { id: 'purple', name: 'Violet', kanji: '茈', cd: 22, color: '#a24bff' },
       { id: 'domain', name: 'Unlimited Void', kanji: '無量空処', cd: DOMAIN.voidCooldown, color: '#6b8cff' },
     ],
@@ -69,7 +69,7 @@ export const KITS = {
     powers: [
       { id: 'dismantle', name: 'Démantèlement', kanji: '解', cd: 0, color: '#ff6a6a', hold: true },
       { id: 'cleave', name: 'Clivage', kanji: '捌', cd: 0, color: '#ffd0d0', hold: true },
-      { id: 'fuga', name: 'Flèche de feu', kanji: '竈', cd: 16, color: '#ff8a1e' },
+      { id: 'fuga', name: 'Fuga', kanji: '竈', cd: 16, color: '#ff8a1e' },
       { id: 'domain', name: 'Malevolent Shrine', kanji: '伏魔御廚子', cd: DOMAIN.shrineCooldown, color: '#c4141e' },
     ],
     dashCd: 1.2, dodgeCd: 0.7,

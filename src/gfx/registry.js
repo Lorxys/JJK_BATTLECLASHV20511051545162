@@ -36,6 +36,7 @@ export function buildingTex(variant, state) {
   if (!ART.anchors[key]) {
     const b = drawBuilding(variant, state);
     add(key, b.canvas, b.ox, b.oy);
+    if (b.glow) add(key + '_glow', b.glow, b.ox, b.oy);
   }
   return key;
 }

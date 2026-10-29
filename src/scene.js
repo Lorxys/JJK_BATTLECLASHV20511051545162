@@ -11,6 +11,7 @@ import { FX } from './game/fx.js';
 import { Enemies } from './game/enemies.js';
 import { Flow } from './game/flow.js';
 import { Domain } from './game/domain.js';
+import { Night } from './game/night.js';
 import { Chaos } from './game/chaos.js';
 import { Player } from './game/player.js';
 import { installCombat } from './game/combat.js';
@@ -28,6 +29,7 @@ export class WorldScene extends Phaser.Scene {
     W.fx = new FX(this);
     W.enemies = new Enemies(this);
     W.domain = new Domain(this);
+    W.night = new Night(this);
     this.buildWorld();
     this.camX = isoX(48, 48); this.camY = isoY(48, 48);
     this.menuT = 0;
@@ -64,6 +66,7 @@ export class WorldScene extends Phaser.Scene {
     W.enemies.clear();
     W.fx.clear();
     W.domain.clear();
+    W.night.clear();
     W.city.destroy();
     this.buildWorld();
     W.chaos = null;
@@ -149,6 +152,7 @@ export class WorldScene extends Phaser.Scene {
       cam.centerOn(Math.round(tx), Math.round(ty));
       W.city.update(real, cam);
       W.fx.update(real);
+      W.night.update(real, cam);
       W.ground.update(cam);
       return;
     }
@@ -171,6 +175,7 @@ export class WorldScene extends Phaser.Scene {
       W.domain.update(dt);
       W.city.update(dt, cam);
       W.fx.update(dt);
+      W.night.update(dt, cam);
     }
     W.ground.update(cam);
 
