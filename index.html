@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Gojo contre Sukuna</title>
+  <meta name="description" content="Jeu d'action sandbox en pixel art isométrique : Gojo et Sukuna contre les fléaux dans une ville destructible.">
+  <meta name="theme-color" content="#1b1424">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gojo vs Sukuna">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game"></div>
+  <div id="ui"></div>
+  <div id="loading"><div class="l-k">領域展開</div><div class="l-t">Génération de la ville…</div></div>
+  <div id="rotate"><div class="r-icon"></div><div>Tourne ton téléphone<br>en mode paysage</div></div>
+  <pre id="errlog" class="hidden"></pre>
+  <script src="vendor/phaser.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{background:#6a8;margin:0}canvas{image-rendering:pixelated}#err{color:red;font:14px monospace}</style></head><body><div id="err"></div><div id="out"></div>
+<script>window.onerror=(m,s,l)=>{document.getElementById('err').textContent+=m+' @'+s+':'+l+'\n';document.title='ERR';};</script>
+<script type="module">
+import { buildSheet, SHEET_KEYS } from '../src/gfx/puppet.js';
+import { drawBuilding, VARIANTS } from '../src/gfx/buildingArt.js';
+import { makePropArt } from '../src/gfx/propArt.js';
+import { makeTileSet } from '../src/gfx/tiles.js';
+const out=document.getElementById('out');
+const show=(cv,s=2)=>{const c=document.createElement('canvas');c.width=cv.width*s;c.height=cv.height*s;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(cv,0,0,c.width,c.height);out.appendChild(c);};
+const mode=location.hash.slice(1)||'chars';
+if(mode==='chars'){ for(const k of ['gojo','sukuna']) show(buildSheet(k).canvas,2); for(const k of SHEET_KEYS.slice(2)) show(buildSheet(k).canvas,1);}
+if(mode==='bld'){ for(const k of Object.keys(VARIANTS)) show(drawBuilding(k,0).canvas,1); for(const st of [1,2,3,4]) show(drawBuilding('office3',st).canvas,1); for(const st of [1,2,3,4]) show(drawBuilding('house3a',st).canvas,1);}
+if(mode==='car'){const a=makePropArt();for(const k of ['car_0_0','car_0_1','van_1_0','van_1_1','container_2_0','container_2_1'])show(a[k].canvas,6);}
+if(mode==='props'){ const a=makePropArt(); for(const k in a) show(a[k].canvas,2); const t=makeTileSet(); for(const k in t) for(const c of t[k]) show(c,2);}
+document.title='OK';
+</script></body></html>

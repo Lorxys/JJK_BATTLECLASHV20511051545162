@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#1b1424;overflow:hidden}canvas{display:block;image-rendering:pixelated}</style></head><body><canvas id="c"></canvas>
+<script type="module">
+import { buildSheet } from '../src/gfx/puppet.js';
+const S=parseInt(location.hash.slice(1))||192;const c=document.getElementById('c');c.width=c.height=S;c.style.width=c.style.height=S+'px';
+const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+x.fillStyle='#1b1424';x.fillRect(0,0,S,S);
+const u=S/48;x.fillStyle='#3a1f6e';x.fillRect(0,S*0.62,S,S*0.38);x.fillStyle='#7a4be0';x.fillRect(0,S*0.6,S,u*2);
+const g=buildSheet('gojo'),s=buildSheet('sukuna');
+const fr=(sh,i,dx,flip)=>{x.save();if(flip){x.translate(S,0);x.scale(-1,1);}x.drawImage(sh.canvas,(i%sh.cols)*sh.fw,Math.floor(i/sh.cols)*sh.fh,sh.fw,sh.fh,dx,S*0.12,sh.fw*u*0.78,sh.fh*u*0.78);x.restore();};
+fr(s,s.anims.idle.f[0],-S*0.1,true);fr(g,g.anims.idle.f[0],-S*0.1,false);
+document.title='OK';
+</script></body></html>
