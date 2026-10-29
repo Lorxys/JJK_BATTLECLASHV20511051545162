@@ -59,6 +59,12 @@ function drawHumanoid(pb, P, q, back, ox, oy) {
     pb.rect(hnd[0] - 1, hnd[1] - 1, P.hand + 2, P.hand + 2, OUTLINE);
     pb.rect(hnd[0], hnd[1], P.hand, P.hand, dark ? col.skinD : col.skin);
     if (q.point && !dark) { const t = seg(hnd[0], hnd[1], q.nfa, 3); pb.line(hnd[0] + 1, hnd[1], t[0] + 1, t[1], col.skin); }
+    if (q.cross && !dark) {
+      // index et majeur croisés, dressés vers le haut (signe de l'Unlimited Void)
+      pb.rect(hnd[0], hnd[1] - 5, 3, 5, OUTLINE);
+      pb.line(hnd[0] + 0.5, hnd[1] - 1, hnd[0] + 1.5, hnd[1] - 4, col.skin);
+      pb.line(hnd[0] + 1.5, hnd[1] - 1, hnd[0] + 0.5, hnd[1] - 4, col.skinD);
+    }
   };
 
   // Traînée de mouvement (smear) : positions intermédiaires du membre qui frappe, en couleur claire.
@@ -121,7 +127,7 @@ function faceBase(pb, hx, hy, P, rx = 3.6, ry = 4.3) {
   pb.ellipse(hx + 0.5, hy + 0.5, rx + 1, ry + 1, OUTLINE);
   pb.ellipse(hx + 0.5, hy + 0.5, rx, ry, (x, y, dx) => (dx < -0.45 ? P.col.skinD : P.col.skin));
 }
-const gojoHead = (pb, hx, hy, back, P) => {
+const gojoHead = (pb, hx, hy, back, P, q = {}) => {
   const W = C('#f4f6fb'), Wd = C('#c3cadf'), Wl = C('#ffffff'), band = C('#16161f');
   faceBase(pb, hx + 1, hy, P);
   const spikes = [[-7, -4], [-6, -9], [-2, -12], [2, -11], [5, -9], [7, -5]];
@@ -131,6 +137,13 @@ const gojoHead = (pb, hx, hy, back, P) => {
   if (back) {
     pb.ellipse(hx, hy + 0.5, 4.8, 4.5, (x, y, dx) => (dx < -0.2 ? Wd : W));
     pb.rect(hx - 5, hy - 1, 2, 2, band); pb.rect(hx - 7, hy, 2, 1, band);
+  } else if (q.eyes) {
+    // bandeau relevé sur le front : les Six Yeux se dévoilent
+    pb.rect(hx - 1, hy - 4, 7, 2, band);
+    pb.rect(hx - 4, hy - 4, 3, 1, band);
+    const blue = C('#3fb4ff'), blueL = C('#c8f0ff');
+    for (const ex of [hx + 1, hx + 4]) { pb.rect(ex, hy - 1, 2, 2, blue); pb.set(ex, hy - 1, blueL); }
+    pb.set(hx + 4, hy + 2, P.col.skinD);
   } else {
     pb.rect(hx - 1, hy - 1, 7, 2, band); // bandeau sur les yeux
     pb.rect(hx - 4, hy - 1, 3, 1, band);
@@ -277,6 +290,18 @@ const ANIMS = {
     cast: { fps: 12, poses: [p({ lean: -0.05, nua: -0.4, nfa: -1.4, nt: 0.3, ft: -0.3 }), p({ lean: 0.15, nua: 1.45, nfa: 1.5, nt: 0.4, ft: -0.4, point: true }), p({ lean: 0.12, nua: 1.4, nfa: 1.45, nt: 0.4, ft: -0.4, point: true })] },
     charge: { fps: 6, poses: [p({ lean: 0, nua: 1.6, nfa: 1.7, fua: -1.5, ffa: -1.7, nt: 0.4, ft: -0.4, point: true }), p({ lean: 0, bob: 1, nua: 1.55, nfa: 1.75, fua: -1.45, ffa: -1.65, nt: 0.4, ft: -0.4, point: true })] },
     sign: { fps: 4, poses: [p({ nua: 0.55, nfa: 2.7, fua: 0.7, ffa: 2.6, point: true }), p({ bob: 1, nua: 0.55, nfa: 2.75, fua: 0.7, ffa: 2.65, point: true })] },
+    // Unlimited Void : main au visage, bandeau relevé, Six Yeux dévoilés, puis doigts croisés tenus
+    domain: { fps: 5, hold: true, poses: [
+      p({ lean: 0.02 }),
+      p({ lean: 0, nua: 1.6, nfa: 2.6, ht: 0 }),
+      p({ lean: -0.05, nua: 2.5, nfa: 3.0 }),
+      p({ lean: -0.08, nua: 2.85, nfa: 3.25, ht: -1 }),
+      p({ lean: -0.12, nua: 2.95, nfa: 3.5, eyes: true, ht: -1 }),
+      p({ lean: -0.1, nua: 2.4, nfa: 3.2, eyes: true }),
+      p({ lean: -0.04, nua: 1.6, nfa: 2.4, eyes: true }),
+      p({ lean: 0.02, nua: 0.8, nfa: 2.4, eyes: true, cross: true }),
+      p({ lean: 0.04, nua: 0.75, nfa: 2.55, eyes: true, cross: true, fua: 0.1, ffa: 0.4 }),
+      p({ lean: 0.04, bob: 1, nua: 0.75, nfa: 2.6, eyes: true, cross: true, fua: 0.1, ffa: 0.4 })] },
     stagger: { fps: 8, poses: [p({ lean: -0.4, nua: -1.2, nfa: -2.0, fua: -0.9, ffa: -1.6, nk: 0.4 })] },
   },
 };
@@ -380,7 +405,7 @@ export function buildSheet(key) {
   const frames = [];
   const anims = {};
   for (const [name, def] of Object.entries(A)) {
-    anims[name] = { f: [], b: [], fps: def.fps };
+    anims[name] = { f: [], b: [], fps: def.fps, hold: !!def.hold };
     for (const back of [false, true]) {
       for (const q of def.poses) {
         const pb = new PB(P.fw, P.fh);

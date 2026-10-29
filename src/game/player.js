@@ -389,7 +389,7 @@ export class Player {
       case 'attack': case 'dash': case 'dodge': case 'stagger': name = this.anim; break;
       case 'cast': name = 'cast'; break;
       case 'charge': name = this.chargeAnim || 'charge'; break;
-      case 'cinematic': name = 'sign'; break;
+      case 'cinematic': name = this.sheet.anims.domain ? 'domain' : 'sign'; break;
       default: name = 'idle';
     }
     const a = sh.anims[name] || sh.anims.idle;
@@ -397,7 +397,7 @@ export class Player {
     const frames = sy < -0.05 ? a.b : a.f;
     const loop = name === 'run' || name === 'idle' || name === 'charge' || name === 'sign';
     let fi = Math.floor(this.animT * a.fps);
-    if (name === 'fuga') fi = fi < frames.length - 2 ? fi : frames.length - 2 + (fi % 2); // pose tenue qui vibre
+    if (name === 'fuga' || a.hold) fi = fi < frames.length - 2 ? fi : frames.length - 2 + (fi % 2); // pose tenue qui vibre
     else fi = loop ? fi % frames.length : Math.min(frames.length - 1, fi);
     const X = Math.round(isoX(this.x, this.y)), Y = Math.round(isoY(this.x, this.y));
     this.sprite.setFrame(frames[fi]).setFlipX(sx < 0).setPosition(X, Y - Math.round(this.z)).setDepth(depthOf(this.x, this.y) + 1);

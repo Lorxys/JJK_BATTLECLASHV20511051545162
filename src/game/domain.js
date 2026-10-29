@@ -74,6 +74,7 @@ export class Domain {
       if (ct < 0) { this.draw(z, 0); return; } // écran noir : rien d'autre
       if (!z.shot) {
         z.shot = true; this.cineDom('shot'); fx.shakeCam(5);
+        if (W.player) W.player.animT = 0; // l'animation du lanceur commence avec le plan
         W.audio && W.audio.domainName(z.type);
         if (void_) { fx.flash(z.x, z.y, 6); W.night && W.night.flash(z.x, z.y, 10, 0xcfe0ff, 0.6, 0.8); }
       }
