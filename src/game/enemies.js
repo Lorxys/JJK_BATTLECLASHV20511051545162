@@ -6,12 +6,12 @@ import { QUALITY } from '../config.js';
 import { settings } from '../settings.js';
 
 export const EDEF = {
-  larve: { sheet: 'larve', hp: 30, speed: 2.8, r: 0.3, range: 0.9, windup: 0.3, cd: 1.1, mass: 0.5, shadow: 'shadow_s', h: 14 },
-  rodeur: { sheet: 'rodeur', hp: 80, speed: 1.9, r: 0.35, range: 1.2, windup: 0.45, cd: 1.4, mass: 1, shadow: 'shadow_s', h: 36 },
-  colosse: { elite: true, name: 'Colosse', sheet: 'colosse', hp: 1100, speed: 1.15, r: 0.7, range: 2.0, windup: 0.9, cd: 2.4, mass: 6, shadow: 'shadow_l', h: 74 },
-  predateur: { elite: true, name: 'Prédateur', sheet: 'predateur', hp: 460, speed: 4.4, r: 0.38, range: 1.3, windup: 0.22, cd: 0.9, mass: 1.3, shadow: 'shadow_m', h: 34 },
-  artillerie: { elite: true, name: 'Artillerie', sheet: 'artillerie', hp: 520, speed: 1.7, r: 0.45, range: 9, windup: 0.5, cd: 2.6, mass: 1.6, shadow: 'shadow_m', h: 40, hover: 12 },
-  superieur: { elite: true, name: 'Fléau supérieur', sheet: 'superieur', hp: 2800, speed: 2.6, r: 0.45, range: 1.6, windup: 0.45, cd: 1.2, mass: 3, shadow: 'shadow_m', h: 54 },
+  larve: { sheet: 'larve', hp: 15, speed: 2.8, r: 0.3, range: 0.9, windup: 0.3, cd: 1.1, mass: 0.5, shadow: 'shadow_s', h: 14 },
+  rodeur: { sheet: 'rodeur', hp: 40, speed: 1.9, r: 0.35, range: 1.2, windup: 0.45, cd: 1.4, mass: 1, shadow: 'shadow_s', h: 36 },
+  colosse: { elite: true, name: 'Colosse', sheet: 'colosse', hp: 550, speed: 1.15, r: 0.7, range: 2.0, windup: 0.9, cd: 2.4, mass: 6, shadow: 'shadow_l', h: 74 },
+  predateur: { elite: true, name: 'Prédateur', sheet: 'predateur', hp: 230, speed: 4.4, r: 0.38, range: 1.3, windup: 0.22, cd: 0.9, mass: 1.3, shadow: 'shadow_m', h: 34 },
+  artillerie: { elite: true, name: 'Artillerie', sheet: 'artillerie', hp: 260, speed: 1.7, r: 0.45, range: 9, windup: 0.5, cd: 2.6, mass: 1.6, shadow: 'shadow_m', h: 40, hover: 12 },
+  superieur: { elite: true, name: 'Fléau supérieur', sheet: 'superieur', hp: 1400, speed: 2.6, r: 0.45, range: 1.6, windup: 0.45, cd: 1.2, mass: 3, shadow: 'shadow_m', h: 54 },
 };
 const G = 700;
 

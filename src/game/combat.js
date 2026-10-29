@@ -119,6 +119,7 @@ export function arc(x, y, dx, dy, range, half, def) {
       const f = def.force || 0;
       const extra = def.pctMax ? e.max * def.pctMax : 0;
       e.hit({ dmg: def.dmg + extra, kx: dx * f, ky: dy * f, lift: def.lift || 0, stun: def.stun || 0.25, heavy: def.heavy ?? f > 8, src: def.src });
+      if (def.hitList) def.hitList.push(e);
       hits++;
     }
   }

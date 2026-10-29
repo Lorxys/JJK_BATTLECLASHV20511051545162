@@ -4,6 +4,7 @@ import { PB, C, shadeC, OUTLINE } from './pixel.js';
 import { hash2 } from '../util.js';
 
 const seg = (x, y, a, l) => [x + Math.sin(a) * l, y + Math.cos(a) * l];
+const lerp = (a, b, t) => a + (b - a) * t;
 
 function limb(pb, pts, w, col) {
   for (let i = 0; i < pts.length - 1; i++) pb.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], OUTLINE, w + 2);
@@ -37,7 +38,6 @@ function drawHumanoid(pb, P, q, back, ox, oy) {
   const arm = (S, ua, fa) => { const e = seg(S[0], S[1], ua, P.uarm); const hnd = seg(e[0], e[1], fa, P.farm); return [S, e, hnd]; };
   const na = arm(nS, q.nua, q.nfa), fa = arm(fS, q.fua, q.ffa);
 
-  const legCol = (c) => c;
   const drawLeg = (L, dark) => {
     limb(pb, [L[0], L[1], L[2]], P.legW, dark ? (col.pantsD || shadeC(col.pants, 0.8)) : col.pants);
     const f = L[2];
@@ -57,8 +57,31 @@ function drawHumanoid(pb, P, q, back, ox, oy) {
     if (q.point && !dark) { const t = seg(hnd[0], hnd[1], q.nfa, 3); pb.line(hnd[0] + 1, hnd[1], t[0] + 1, t[1], col.skin); }
   };
 
-  drawArm(back ? na : fa, true);
+  // Traînée de mouvement (smear) : positions intermédiaires du membre qui frappe, en couleur claire.
+  const trailCol = P.trail || C('#ffffff');
+  const drawTrail = (part) => {
+    const tr = q.trail;
+    if (!tr || tr.part !== part) return;
+    for (const k of [0.3, 0.65]) {
+      if (part === 'na' || part === 'fa') {
+        const n = part === 'na';
+        const A = arm(n ? nS : fS, lerp(tr.a[0], n ? q.nua : q.fua, k), lerp(tr.a[1], n ? q.nfa : q.ffa, k));
+        pb.line(A[0][0], A[0][1], A[1][0], A[1][1], trailCol, P.armW);
+        pb.line(A[1][0], A[1][1], A[2][0], A[2][1], trailCol, P.armW + 1);
+      } else {
+        const n = part === 'nl';
+        const L = legs(lerp(tr.a[0], n ? q.nt : q.ft, k), lerp(tr.a[1], n ? q.nk : q.fk, k), n ? 1 : -1);
+        pb.line(L[0][0], L[0][1], L[1][0], L[1][1], trailCol, P.legW);
+        pb.line(L[1][0], L[1][1], L[2][0], L[2][1], trailCol, P.legW + 1);
+      }
+    }
+  };
+  const first = back ? 'na' : 'fa', last = back ? 'fa' : 'na';
+  drawTrail(first);
+  drawArm(first === 'na' ? na : fa, true);
+  drawTrail('fl');
   drawLeg(fl, true);
+  drawTrail('nl');
   drawLeg(nl, false);
   // jupe / bas de manteau
   if (P.skirt) {
@@ -84,7 +107,8 @@ function drawHumanoid(pb, P, q, back, ox, oy) {
   // tête
   const hx = Math.round(neck[0] + Math.sin(lean) * 2 + q.ht), hy = Math.round(neck[1] - P.headR - 1);
   P.head(pb, hx, hy, back, P, q);
-  drawArm(back ? fa : na, false);
+  drawTrail(last);
+  drawArm(last === 'na' ? na : fa, false);
   return { hip, neck, head: [hx, hy], nh: na[2], fh: fa[2] };
 }
 
@@ -155,14 +179,14 @@ export const BODIES = {
     fw: 48, fh: 58, ox: 24, oy: 55,
     thigh: 7, shin: 8, torso: 12, uarm: 6, farm: 6, legW: 3, armW: 3, hipW: 7, shW: 9, headR: 4, hand: 2,
     col: { skin: C('#f3d6c4'), skinD: C('#d6b09b'), top: C('#232a48'), topD: C('#161b30'), topL: C('#36406a'), pants: C('#1d2340'), pantsD: C('#13172b'), shoe: C('#0f0f14') },
-    head: gojoHead,
+    head: gojoHead, trail: C('#bfe2ff'),
     torsoFn: (dx, dy, back) => (!back && dy > 9 && dy < 12 && dx > -1 && dx < 3 ? C('#36406a') : !back && dy === 7 && dx === 1 ? C('#e8c050') : 0),
   },
   sukuna: {
     fw: 48, fh: 58, ox: 24, oy: 55,
     thigh: 7, shin: 8, torso: 12, uarm: 6, farm: 6, legW: 3, armW: 3, hipW: 8, shW: 10, headR: 4, hand: 2,
     col: { skin: C('#f1cdb5'), skinD: C('#d2a68c'), top: C('#ece8e0'), topD: C('#c4bdb0'), topL: C('#ffffff'), pants: C('#2c272b'), pantsD: C('#1c181b'), shoe: C('#141012') },
-    head: sukunaHead, bareForearm: true, tattoo: true,
+    head: sukunaHead, bareForearm: true, tattoo: true, trail: C('#ffb0b0'),
     skirt: { len: 9, wTop: 9, wBot: 14, col: C('#ece8e0'), colD: C('#c4bdb0') },
     torsoFn: (dx, dy) => (dy >= 0 && dy < 3 ? C('#1a1418') : 0),
   },
@@ -207,10 +231,32 @@ const ANIMS = {
   gojo: {
     idle: { fps: 4, poses: [p({}), p({}), p({ bob: 1, nua: 0.1, fua: -0.05 }), p({ bob: 1 })] },
     run: { fps: 12, poses: run() },
-    atk1: { fps: 16, poses: [p({ lean: -0.05, nua: -0.5, nfa: -1.6, nt: 0.3, ft: -0.3 }), p({ lean: 0.25, nua: 1.5, nfa: 1.55, fua: -0.4, ffa: 0.2, nt: 0.4, ft: -0.4 }), p({ lean: 0.15, nua: 1.0, nfa: 1.3, nt: 0.3, ft: -0.3 })] },
-    atk2: { fps: 16, poses: [p({ lean: -0.1, nt: 0.7, nk: 1.6, fua: 0.5, ffa: 1.0 }), p({ lean: -0.35, nt: 1.45, nk: 0.05, fua: 0.8, ffa: 1.2, nua: -0.6, nfa: -0.3 }), p({ lean: -0.15, nt: 0.8, nk: 0.8 })] },
-    atk3: { fps: 16, poses: [p({ lean: -0.1, nua: -0.6, nfa: -1.0, fua: -0.6, ffa: -1.0, nt: 0.3, ft: -0.4 }), p({ lean: 0.3, nua: 1.4, nfa: 1.5, fua: 1.3, ffa: 1.45, nt: 0.5, ft: -0.5, point: false }), p({ lean: 0.2, nua: 1.1, nfa: 1.3, fua: 1.0, ffa: 1.2, nt: 0.4, ft: -0.4 })] },
-    atk4: { fps: 14, poses: [p({ bob: 2, nk: 0.9, fk: 0.9, nt: 0.4, ft: -0.4, nua: 0.6, nfa: 1.8, fua: 0.5, ffa: 1.7 }), p({ lean: -0.5, ft: 1.75, fk: -0.1, nt: -0.1, nk: 0.2, nua: -0.9, nfa: -0.6, fua: 0.9, ffa: 1.4 }), p({ lean: -0.25, ft: 0.9, fk: 0.6, nua: -0.4, nfa: -0.2 })] },
+    // Coups de base : préparation, frappe, extension (traînée), suivi, retour.
+    atk1: { fps: 20, poses: [ // direct du bras avant
+      p({ lean: -0.12, nua: -0.6, nfa: -1.7, fua: 0.4, ffa: 1.2, nt: 0.25, ft: -0.3 }),
+      p({ lean: 0.2, nua: 1.2, nfa: 1.3, fua: -0.2, ffa: 0.5, nt: 0.4, ft: -0.4, trail: { part: 'na', a: [-0.6, -1.7] } }),
+      p({ lean: 0.32, nua: 1.55, nfa: 1.57, fua: -0.5, ffa: 0.1, nt: 0.45, ft: -0.45, trail: { part: 'na', a: [0.5, 0.8] } }),
+      p({ lean: 0.26, nua: 1.45, nfa: 1.5, fua: -0.4, ffa: 0.2, nt: 0.4, ft: -0.4 }),
+      p({ lean: 0.1, nua: 0.6, nfa: 1.0, nt: 0.25, ft: -0.25 })] },
+    atk2: { fps: 20, poses: [ // coup de pied haut
+      p({ lean: 0.05, nt: 0.6, nk: 1.7, fua: 0.5, ffa: 1.0, nua: -0.4, nfa: 0 }),
+      p({ lean: -0.2, nt: 1.2, nk: 0.4, fua: 0.7, ffa: 1.1, nua: -0.6, nfa: -0.2, trail: { part: 'nl', a: [0.6, 1.7] } }),
+      p({ lean: -0.4, nt: 1.65, nk: 0, nua: -0.8, nfa: -0.5, fua: 0.9, ffa: 1.3, trail: { part: 'nl', a: [1.0, 0.8] } }),
+      p({ lean: -0.3, nt: 1.4, nk: 0.3, nua: -0.6, nfa: -0.3, fua: 0.8, ffa: 1.2 }),
+      p({ lean: -0.1, nt: 0.7, nk: 1.0 })] },
+    atk3: { fps: 20, poses: [ // double paume
+      p({ lean: -0.15, bob: 1, nua: -0.7, nfa: -1.2, fua: -0.7, ffa: -1.2, nt: 0.3, ft: -0.4 }),
+      p({ lean: 0.25, nua: 1.2, nfa: 1.4, fua: 1.1, ffa: 1.3, nt: 0.5, ft: -0.5, trail: { part: 'na', a: [-0.7, -1.2] } }),
+      p({ lean: 0.38, nua: 1.5, nfa: 1.6, fua: 1.4, ffa: 1.55, nt: 0.6, ft: -0.6, point: true, trail: { part: 'na', a: [0.5, 0.6] } }),
+      p({ lean: 0.3, nua: 1.45, nfa: 1.5, fua: 1.35, ffa: 1.45, nt: 0.55, ft: -0.55, point: true }),
+      p({ lean: 0.15, nua: 0.9, nfa: 1.2, fua: 0.8, ffa: 1.1, nt: 0.35, ft: -0.35 })] },
+    atk4: { fps: 15, poses: [ // coup de pied retourné + poussée de l'Infini
+      p({ bob: 3, lean: 0.2, nk: 1.0, fk: 1.0, nt: 0.4, ft: -0.4, nua: 0.6, nfa: 1.9, fua: 0.5, ffa: 1.8 }),
+      p({ bob: 1, lean: -0.2, ft: 0.8, fk: 1.6, nua: -0.6, nfa: -0.2, fua: 0.8, ffa: 1.4 }),
+      p({ lean: -0.45, ft: 1.4, fk: 0.3, nt: -0.05, nk: 0.25, nua: -0.9, nfa: -0.6, fua: 0.9, ffa: 1.4, trail: { part: 'fl', a: [0.8, 1.6] } }),
+      p({ lean: -0.55, ft: 1.85, fk: -0.1, nt: -0.1, nk: 0.2, nua: -1.0, nfa: -0.7, fua: 1.0, ffa: 1.5, trail: { part: 'fl', a: [1.2, 0.6] } }),
+      p({ lean: -0.4, ft: 1.6, fk: 0.2, nua: -0.7, nfa: -0.4, fua: 0.9, ffa: 1.4 }),
+      p({ lean: -0.15, ft: 0.8, fk: 0.7, nua: -0.2, nfa: 0.2 })] },
     dash: { fps: 10, poses: [p({ lean: 0.55, nt: -0.5, nk: 0.8, ft: 0.6, fk: 0.4, nua: -1.0, nfa: -0.8, fua: -0.9, ffa: -0.7 })] },
     dodge: { fps: 10, poses: [p({ lean: -0.35, bob: 2, nt: 0.5, nk: 1.2, ft: -0.6, fk: 0.6, nua: 0.8, nfa: 1.6, fua: 0.6, ffa: 1.4 })] },
     cast: { fps: 12, poses: [p({ lean: -0.05, nua: -0.4, nfa: -1.4, nt: 0.3, ft: -0.3 }), p({ lean: 0.15, nua: 1.45, nfa: 1.5, nt: 0.4, ft: -0.4, point: true }), p({ lean: 0.12, nua: 1.4, nfa: 1.45, nt: 0.4, ft: -0.4, point: true })] },
@@ -222,10 +268,31 @@ const ANIMS = {
 ANIMS.sukuna = {
   idle: { fps: 4, poses: [p({ lean: 0.08, nua: 0.25, nfa: 0.6 }), p({ lean: 0.08, nua: 0.25, nfa: 0.6 }), p({ bob: 1, lean: 0.1, nua: 0.3, nfa: 0.65 }), p({ bob: 1, lean: 0.1, nua: 0.3, nfa: 0.65 })] },
   run: { fps: 12, poses: run(0.3) },
-  atk1: { fps: 16, poses: [p({ lean: -0.1, nua: 2.6, nfa: 2.9, nt: 0.3, ft: -0.3 }), p({ lean: 0.3, nua: 0.9, nfa: 0.4, nt: 0.5, ft: -0.4 }), p({ lean: 0.2, nua: 0.4, nfa: 0.2, nt: 0.3, ft: -0.3 })] },
-  atk2: { fps: 16, poses: [p({ lean: -0.05, fua: -0.6, ffa: -1.6, nua: 0.6, nfa: 1.6 }), p({ lean: 0.3, fua: 1.5, ffa: 1.55, nua: -0.6, nfa: -0.3, nt: 0.5, ft: -0.5 }), p({ lean: 0.15, fua: 0.9, ffa: 1.2 })] },
-  atk3: { fps: 16, poses: [p({ lean: 0, nt: 0.5, nk: 1.4 }), p({ lean: -0.1, nt: 1.5, nk: 2.2, nua: -0.5, nfa: 0.2, fua: 0.6, ffa: 1.2 }), p({ nt: 0.7, nk: 1.0 })] },
-  atk4: { fps: 13, poses: [p({ lean: -0.2, nua: 2.9, nfa: 3.0, fua: 2.8, ffa: 3.0, nt: 0.3, ft: -0.3 }), p({ lean: 0.45, bob: 2, nua: 0.7, nfa: 0.4, fua: 0.6, ffa: 0.35, nt: 0.6, nk: 0.8, ft: -0.6, fk: 0.4 }), p({ lean: 0.3, bob: 1, nua: 0.5, nfa: 0.3, fua: 0.4, ffa: 0.3 })] },
+  atk1: { fps: 20, poses: [ // griffe plongeante
+    p({ lean: -0.15, nua: 2.7, nfa: 3.0, fua: -0.3, ffa: 0.2, nt: 0.3, ft: -0.3 }),
+    p({ lean: 0.15, nua: 1.8, nfa: 1.9, nt: 0.4, ft: -0.4, trail: { part: 'na', a: [2.7, 3.0] } }),
+    p({ lean: 0.35, nua: 0.8, nfa: 0.4, nt: 0.5, ft: -0.45, trail: { part: 'na', a: [1.8, 1.9] } }),
+    p({ lean: 0.35, nua: 0.4, nfa: 0.1, nt: 0.5, ft: -0.45 }),
+    p({ lean: 0.2, nua: 0.3, nfa: 0.4, nt: 0.3, ft: -0.3 })] },
+  atk2: { fps: 20, poses: [ // revers du bras arrière
+    p({ lean: -0.05, fua: -0.8, ffa: -1.8, nua: 0.6, nfa: 1.6 }),
+    p({ lean: 0.25, fua: 1.0, ffa: 1.3, nt: 0.45, ft: -0.45, trail: { part: 'fa', a: [-0.8, -1.8] } }),
+    p({ lean: 0.35, fua: 1.55, ffa: 1.6, nua: -0.6, nfa: -0.3, nt: 0.5, ft: -0.5, trail: { part: 'fa', a: [1.0, 1.3] } }),
+    p({ lean: 0.3, fua: 1.45, ffa: 1.5, nua: -0.5, nfa: -0.2, nt: 0.5, ft: -0.5 }),
+    p({ lean: 0.15, fua: 0.8, ffa: 1.1 })] },
+  atk3: { fps: 20, poses: [ // genou montant + uppercut
+    p({ lean: 0.1, bob: 1, nt: 0.4, nk: 1.2, nua: -0.4, nfa: -1.2 }),
+    p({ lean: -0.05, nt: 1.2, nk: 2.0, nua: 1.0, nfa: 2.4, trail: { part: 'nl', a: [0.4, 1.2] } }),
+    p({ lean: -0.15, nt: 1.55, nk: 2.3, nua: 1.6, nfa: 2.9, trail: { part: 'na', a: [1.0, 2.4] } }),
+    p({ lean: -0.1, nt: 1.2, nk: 1.8, nua: 1.5, nfa: 2.7 }),
+    p({ nt: 0.6, nk: 0.9, nua: 0.6, nfa: 1.2 })] },
+  atk4: { fps: 15, poses: [ // écrasement à deux mains
+    p({ bob: 2, lean: 0.2, nk: 0.8, fk: 0.8, nua: 0.4, nfa: 1.0, fua: 0.3, ffa: 0.9 }),
+    p({ bob: -1, lean: -0.25, nua: 2.9, nfa: 3.05, fua: 2.8, ffa: 3.0, nt: 0.3, ft: -0.3 }),
+    p({ lean: 0.2, nua: 1.8, nfa: 1.6, fua: 1.7, ffa: 1.5, nt: 0.5, ft: -0.5, trail: { part: 'na', a: [2.9, 3.05] } }),
+    p({ lean: 0.5, bob: 3, nua: 0.7, nfa: 0.4, fua: 0.6, ffa: 0.35, nt: 0.65, nk: 0.9, ft: -0.6, fk: 0.5, trail: { part: 'na', a: [1.8, 1.6] } }),
+    p({ lean: 0.45, bob: 3, nua: 0.55, nfa: 0.3, fua: 0.5, ffa: 0.3, nt: 0.6, nk: 0.9, ft: -0.6, fk: 0.5 }),
+    p({ lean: 0.25, bob: 1, nua: 0.5, nfa: 0.4 })] },
   dash: { fps: 10, poses: [p({ lean: 0.6, nt: -0.6, nk: 0.6, ft: 0.8, fk: 0.9, nua: -1.1, nfa: -0.6, fua: -1.0, ffa: -0.5 })] },
   dodge: { fps: 10, poses: [p({ lean: -0.3, bob: 2, nt: 0.5, nk: 1.2, ft: -0.6, fk: 0.6, nua: 0.5, nfa: 1.0, fua: 0.4, ffa: 1.2 })] },
   cast: { fps: 12, poses: [p({ lean: 0.05, nua: -0.8, nfa: -1.9, nt: 0.3, ft: -0.3 }), p({ lean: 0.2, nua: 1.6, nfa: 1.6, nt: 0.4, ft: -0.4 }), p({ lean: 0.2, nua: 1.9, nfa: 2.0, nt: 0.4, ft: -0.4 })] },

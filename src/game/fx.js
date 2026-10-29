@@ -126,6 +126,17 @@ export class FX {
     this.debris(x, y, 4, 6 + r * 2, 'concrete', 1 + r * 0.2);
     this.flash(x, y, r);
   }
+  // Impact de coup : éclat en étoile + lignes de vitesse.
+  impact(x, y, z, tint = 0xffffff, heavy = false) {
+    this.spawn('impact0', x, y, z, 0, 0, 0, heavy ? 0.16 : 0.11, { frames: ['impact0', 'impact1', 'impact2'], fps: heavy ? 18 : 27, tint, top: true, blink: false, important: true, scale: heavy ? 1.6 : 1 });
+    const n = heavy ? 6 : 4;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, r0 = 0.35, r1 = heavy ? 1.6 : 1.0;
+      this.beam(x + Math.cos(a) * r0, y + Math.sin(a) * r0, z, x + Math.cos(a) * r1, y + Math.sin(a) * r1, z + rand(-6, 6), 0.07, i % 2 ? 0xffffff : tint, 1);
+    }
+    this.sparks(x, y, z, heavy ? 8 : 4, tint, heavy ? 4 : 2.5);
+  }
+
   // Disparition d'un fléau : énergie maudite qui s'élève.
   dissolve(x, y, h, big = false) {
     const n = big ? 40 : 16;

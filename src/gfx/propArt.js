@@ -192,6 +192,23 @@ function fx() {
     add('chunk' + i, pb);
   }
   pb = new PB(5, 5); pb.rect(2, 0, 1, 5, C('#ffffff')); pb.rect(0, 2, 5, 1, C('#ffffff')); add('spark', pb);
+  // éclat d'impact en étoile (3 images qui s'ouvrent), blanc pour être teinté
+  [5, 9, 12].forEach((R, i) => {
+    pb = new PB(R * 2 + 3, R * 2 + 3);
+    const c = R + 1;
+    const pts = [];
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2 + i * 0.2, r = k % 2 ? R * 0.42 : R * (k % 4 ? 0.8 : 1);
+      pts.push([c + Math.cos(a) * r, c + Math.sin(a) * r * 0.8]);
+    }
+    for (let k = 0; k < 16; k += 2) {
+      const a = pts[k], b = pts[(k + 1) % 16], d = pts[(k + 15) % 16];
+      pb.poly([[c, c], d, a, b], i === 2 ? C('#cfcfcf') : C('#ffffff'));
+    }
+    if (i < 2) pb.ellipse(c, c, R * 0.35, R * 0.3, C('#ffffff'));
+    else pb.ellipse(c, c, R * 0.5, R * 0.42, (x, y) => { pb.d[y * pb.w + x] = 0; return 0; }); // dernière image évidée
+    add('impact' + i, pb);
+  });
   // flammes (4 images)
   for (let i = 0; i < 4; i++) {
     pb = new PB(10, 14);

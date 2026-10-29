@@ -7,18 +7,20 @@ import { settings } from '../settings.js';
 
 const COMBOS = {
   gojo: [
-    { anim: 'atk1', dur: 0.24, hitAt: 0.08, range: 1.5, half: 1.1, dmg: 14, force: 3, lift: 0, stun: 0.35, lunge: 3, bld: 25, sfx: 'punch' },
-    { anim: 'atk2', dur: 0.26, hitAt: 0.1, range: 1.6, half: 1.0, dmg: 15, force: 4, lift: 0, stun: 0.35, lunge: 3, bld: 30, sfx: 'kick' },
-    { anim: 'atk3', dur: 0.26, hitAt: 0.1, range: 1.6, half: 1.1, dmg: 18, force: 5, lift: 0, stun: 0.4, lunge: 3.5, bld: 40, sfx: 'punch' },
-    { anim: 'atk4', dur: 0.4, hitAt: 0.16, range: 1.9, half: 1.3, dmg: 34, force: 13, lift: 200, stun: 0.8, lunge: 4, bld: 160, mov: 20, heavy: true, sfx: 'heavy' },
+    { anim: 'atk1', dur: 0.26, hitAt: 0.07, range: 1.5, half: 1.1, dmg: 14, force: 3, lift: 0, stun: 0.35, lunge: 3, bld: 25, sfx: 'punch' },
+    { anim: 'atk2', dur: 0.26, hitAt: 0.07, range: 1.6, half: 1.0, dmg: 15, force: 4, lift: 0, stun: 0.35, lunge: 3, bld: 30, sfx: 'kick' },
+    { anim: 'atk3', dur: 0.26, hitAt: 0.07, range: 1.6, half: 1.1, dmg: 18, force: 5, lift: 0, stun: 0.4, lunge: 3.5, bld: 40, sfx: 'punch' },
+    { anim: 'atk4', dur: 0.42, hitAt: 0.15, range: 1.9, half: 1.3, dmg: 34, force: 13, lift: 200, stun: 0.8, lunge: 4, bld: 160, mov: 20, heavy: true, sfx: 'heavy' },
   ],
   sukuna: [
-    { anim: 'atk1', dur: 0.24, hitAt: 0.08, range: 1.6, half: 1.2, dmg: 16, force: 3, lift: 0, stun: 0.35, lunge: 3, bld: 30, sfx: 'claw', swipe: 'swipe_red' },
-    { anim: 'atk2', dur: 0.24, hitAt: 0.09, range: 1.5, half: 1.0, dmg: 16, force: 4, lift: 0, stun: 0.35, lunge: 3, bld: 30, sfx: 'punch' },
-    { anim: 'atk3', dur: 0.26, hitAt: 0.1, range: 1.4, half: 1.0, dmg: 20, force: 6, lift: 90, stun: 0.45, lunge: 2.5, bld: 40, sfx: 'kick' },
-    { anim: 'atk4', dur: 0.42, hitAt: 0.18, range: 2.0, half: 1.4, dmg: 38, force: 12, lift: 160, stun: 0.9, lunge: 3, bld: 200, mov: 25, heavy: true, sfx: 'heavy', crack: true, swipe: 'swipe_red' },
+    { anim: 'atk1', dur: 0.26, hitAt: 0.07, range: 1.6, half: 1.2, dmg: 16, force: 3, lift: 0, stun: 0.35, lunge: 3, bld: 30, sfx: 'claw', swipe: 'swipe_red' },
+    { anim: 'atk2', dur: 0.26, hitAt: 0.07, range: 1.5, half: 1.0, dmg: 16, force: 4, lift: 0, stun: 0.35, lunge: 3, bld: 30, sfx: 'punch', swipe: 'swipe_red' },
+    { anim: 'atk3', dur: 0.26, hitAt: 0.07, range: 1.4, half: 1.0, dmg: 20, force: 6, lift: 90, stun: 0.45, lunge: 2.5, bld: 40, sfx: 'kick' },
+    { anim: 'atk4', dur: 0.42, hitAt: 0.15, range: 2.0, half: 1.4, dmg: 38, force: 12, lift: 160, stun: 0.9, lunge: 3, bld: 200, mov: 25, heavy: true, sfx: 'heavy', crack: true, swipe: 'swipe_red' },
   ],
 };
+const BLINK_RANGE = 8; // distance max de la téléportation automatique vers un fléau
+const FUGA_RADIUS = 21.5; // rayon d'explosion de la Flèche de feu (5 x 4,3)
 
 export class Player {
   constructor(scene, key, x, y) {
@@ -177,23 +179,70 @@ export class Player {
     const c = COMBOS[this.key][step];
     this.step = step; this.queued = false;
     this.state = 'attack'; this.t = c.dur; this.animT = 0; this.anim = c.anim;
-    this.face = this.aim(input);
+    // Téléportation automatique sur le fléau le plus proche s'il est hors de portée.
+    const tgt = this.autoTarget(input);
+    if (tgt) {
+      if (Math.hypot(tgt.x - this.x, tgt.y - this.y) > c.range * 0.8 + tgt.def.r) this.blinkTo(tgt);
+      this.face = norm(tgt.x - this.x, tgt.y - this.y);
+    } else this.face = input.mag > 0.2 ? [input.mx, input.my] : this.face;
     const dir = this.face.slice();
+    const tint = this.key === 'gojo' ? 0x9fd0ff : 0xff6b6b;
+    // anticipation : petite traînée pendant la préparation
+    W.fx.ghost(this.sprite, tint, 0.12);
     this.schedule(c.hitAt, () => {
+      const hitList = [];
       const hits = W.combat.arc(this.x, this.y, dir[0], dir[1], c.range, c.half,
-        { dmg: c.dmg, force: c.force, lift: c.lift, stun: c.stun, bld: c.bld, mov: c.mov, heavy: c.heavy, src: 'melee' });
+        { dmg: c.dmg, force: c.force, lift: c.lift, stun: c.stun, bld: c.bld, mov: c.mov, heavy: c.heavy, src: 'melee', hitList });
       const fx = W.fx;
       const ax = this.x + dir[0] * 0.9, ay = this.y + dir[1] * 0.9;
       const [sx, sy] = screenDir(dir[0], dir[1]);
-      fx.spawn(c.swipe || 'swipe', ax, ay, 18, 0, 0, 0, 0.1, { rot: Math.atan2(sy, sx), scale: c.heavy ? 1.6 : 1.1, top: true, blink: false });
-      if (hits) { fx.hitstop(c.heavy ? 0.08 : 0.035); W.audio.play(c.heavy ? 'heavyHit' : 'hit'); }
+      const rot = Math.atan2(sy, sx);
+      fx.spawn(c.swipe || 'swipe', ax, ay, 18, dir[0] * 2, dir[1] * 2, 0, 0.12, { rot, scale: c.heavy ? 1.7 : 1.15, top: true, blink: false });
+      if (this.key === 'sukuna') fx.spawn('swipe_red', ax, ay, 14, 0, 0, 0, 0.1, { rot: rot + (step % 2 ? 0.9 : -0.9), scale: 0.9, top: true, blink: false });
+      for (const e of hitList.slice(0, 4)) fx.impact(e.x, e.y, e.def.h * 0.55, tint, !!c.heavy);
+      if (hits) { fx.hitstop(c.heavy ? 0.09 : 0.045); fx.shakeCam(c.heavy ? 5 : 1.5); W.audio.play(c.heavy ? 'heavyHit' : 'hit'); }
       else W.audio.play('whoosh');
       if (c.heavy) {
         fx.shakeCam(hits ? 4 : 2);
-        if (this.key === 'gojo') fx.ring(ax, ay, 0.2, 1.6, 0.25, 0x9fd0ff, 2);
-        if (c.crack) { W.ground.crack(ax, ay); fx.dust(ax, ay, 5, 2, 0.8); }
+        if (hits) fx.slowmo(0.35, 0.12);
+        if (this.key === 'gojo') { fx.ring(ax, ay, 0.2, 1.8, 0.25, 0x9fd0ff, 2); fx.energy(ax, ay, 16, 10, 0x9fd0ff, 3, 0.4); }
+        if (c.crack) { W.ground.crack(ax, ay); fx.dust(ax, ay, 6, 2, 0.9); fx.ring(ax, ay, 0.2, 1.6, 0.25, 0xff6b6b, 2); }
       }
     });
+  }
+
+  // Cible du combo : dans la direction du joystick s'il est tenu, sinon le fléau le plus proche.
+  autoTarget(input) {
+    const E = W.enemies;
+    if (!E) return null;
+    let e = null;
+    if (input.mag > 0.2) e = E.nearest(this.x, this.y, BLINK_RANGE, input.mx, input.my, 0.45);
+    if (!e) e = E.nearest(this.x, this.y, BLINK_RANGE);
+    return e;
+  }
+
+  // Se téléporte juste à côté du fléau, du côté où se trouve le joueur (ou autour s'il y a un mur).
+  blinkTo(e) {
+    const base = Math.atan2(this.y - e.y, this.x - e.x);
+    const d = e.def.r + 0.75;
+    for (const off of [0, 0.7, -0.7, 1.4, -1.4, 2.2, -2.2, Math.PI]) {
+      const tx = e.x + Math.cos(base + off) * d, ty = e.y + Math.sin(base + off) * d;
+      if (W.city.circleSolid(tx, ty, this.r) || !this.insideDomain(tx, ty)) continue;
+      const fx = W.fx, gojo = this.key === 'gojo';
+      const tint = gojo ? 0x9fd0ff : 0xff6b6b;
+      fx.ghost(this.sprite, tint, 0.3);
+      fx.energy(this.x, this.y, 16, 6, tint, 1.5, 0.35);
+      if (!gojo) { fx.beam(this.x, this.y, 16, tx, ty, 16, 0.08, 0xffffff, 2); fx.beam(this.x, this.y, 12, tx, ty, 12, 0.12, 0xff4040, 1); }
+      this.x = tx; this.y = ty;
+      this.render();
+      fx.ghost(this.sprite, tint, 0.15);
+      fx.ring(tx, ty, 0.1, 0.8, 0.15, tint, 1);
+      if (!gojo) fx.dust(tx, ty, 3, 1, 0.6);
+      this.inv = Math.max(this.inv, 0.15);
+      W.audio.play(gojo ? 'blink' : 'dash');
+      return true;
+    }
+    return false;
   }
 
   dash(input) {
@@ -549,17 +598,39 @@ const POWERS = {
         const hitE = W.enemies.nearest(x, y, 0.8);
         const hitM = W.city.movablesNear(x, y, 0.4).length > 0;
         if (hitE || hitM || W.city.solid(x, y) || dist > 15) {
-          W.combat.area(x, y, 4.3, { dmg: 230, force: 17, lift: 280, stun: 1, bld: 1300, mov: 300, heavy: true, src: 'fire' });
+          // Explosion géante : rayon de 21,5 cases (5 fois le rayon d'origine de 4,3).
+          const R = FUGA_RADIUS;
+          W.combat.area(x, y, R, { dmg: 230, force: 17, lift: 280, stun: 1, bld: 1300, mov: 300, heavy: true, src: 'fire' });
           fx.explosion(x, y, 4, 0xff8a1e);
-          fx.ring(x, y, 0.4, 5, 0.5, 0xffd060, 4);
-          W.ground.scorch(x, y, 3); W.ground.crater(x, y, 2);
-          for (let i = 0; i < 6; i++) {
-            const a = Math.random() * TAU, r = rand(0.5, 3);
-            W.city.addFire(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.9, rand(5, 8));
-            W.ground.scorch(x + Math.cos(a) * r, y + Math.sin(a) * r, 1);
+          fx.ring(x, y, 0.4, R * 0.35, 0.35, 0xfff3a0, 5);
+          fx.ring(x, y, 0.4, R, 0.9, 0xffd060, 5);
+          fx.ring(x, y, 0.4, R * 0.8, 1.1, 0xff6a1e, 3);
+          fx.disc(x, y, R * 0.6, R * 0.2, 0.18, 0xffffff, 0.75, { top: true });
+          W.ground.scorch(x, y, 3); W.ground.crater(x, y, 2.8);
+          for (let i = 0; i < 22; i++) {
+            const a = Math.random() * TAU, r = rand(1, R * 0.75);
+            W.city.addFire(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.9, rand(5, 9));
+            W.ground.scorch(x + Math.cos(a) * r, y + Math.sin(a) * r, rand(1, 3));
           }
-          fx.shakeCam(10); fx.hitstop(0.09);
+          fx.shakeCam(14); fx.hitstop(0.12); fx.slowmo(0.4, 0.25);
           W.audio.play('bigBoom');
+          // cascade d'explosions secondaires qui se propage vers l'extérieur
+          const cx = x, cy = y;
+          let t = 0, next = 0, n = 0;
+          pl.effects.push({
+            update(dt) {
+              t += dt; next -= dt;
+              while (next <= 0 && n < 26) {
+                next += 0.035; n++;
+                const a = Math.random() * TAU, r = R * Math.min(1, (n / 26) * rand(0.6, 1.1));
+                const bx = cx + Math.cos(a) * r, by = cy + Math.sin(a) * r;
+                fx.explosion(bx, by, 1.6, 0xff8a1e);
+                W.ground.scorch(bx, by, 1.5);
+                if (n % 6 === 0) W.audio.play('explosion');
+              }
+              return n < 26;
+            },
+          });
           return false;
         }
         return true;
