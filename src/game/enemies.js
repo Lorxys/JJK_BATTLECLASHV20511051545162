@@ -2,7 +2,9 @@
 import { W } from '../state.js';
 import { isoX, isoY, depthOf, rand, norm, screenDir, TAU } from '../util.js';
 import { ART } from '../gfx/registry.js';
-import { QUALITY } from '../config.js';
+import { QUALITY, GOJO_DMG } from '../config.js';
+
+const GOJO_SRC = new Set(['melee', 'player', 'blue', 'red', 'purple', 'void']);
 import { settings } from '../settings.js';
 import { CHAR_TINT, nightMul } from './night.js';
 
@@ -36,7 +38,9 @@ class Enemy {
   hit(h) {
     if (this.dead) return;
     const E = W.enemies;
-    this.hp -= h.dmg;
+    // Gojo frappe beaucoup plus fort (multiplicateur réglable dans config.js)
+    const gojo = W.player && W.player.key === 'gojo' && GOJO_SRC.has(h.src);
+    this.hp -= gojo ? h.dmg * GOJO_DMG : h.dmg;
     this.flash = 0.08;
     const m = Math.sqrt(this.def.mass);
     this.kvx += h.kx / m; this.kvy += h.ky / m;

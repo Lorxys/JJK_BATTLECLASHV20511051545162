@@ -82,3 +82,6 @@ export const QUALITY = {
   medium: { particles: 280, debris: 80, enemies: 40, shadows: true },
   high: { particles: 480, debris: 140, enemies: 56, shadows: true },
 };
+
+// Multiplicateur des dégâts de Gojo sur les fléaux (coups, Bleu, Rouge, Violet, Unlimited Void).
+export const GOJO_DMG = 5;

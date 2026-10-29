@@ -24,7 +24,8 @@ const BLINK_RANGE = 8; // distance max de la téléportation automatique vers un
 const FUGA_RADIUS = 21.5; // rayon d'explosion du Fuga (5 x 4,3)
 const FUGA_CHARGE = 1.8; // durée de la pose de charge du Fuga
 const FUGA_BURN = 30; // durée du brasier laissé par le Fuga (s)
-const AIM_RANGE = { blue: 6, red: 9, purple: 12, dismantle: 9, cleave: 4, fuga: 14 }; // portée de l'aide à la visée
+const CLEAVE_RANGE = 6, CLEAVE_ARC = 1.35; // portée (cases) et demi-ouverture (rad) du Clivage
+const AIM_RANGE = { blue: 6, red: 9, purple: 12, dismantle: 9, cleave: 7, fuga: 14 }; // portée de l'aide à la visée
 
 export class Player {
   constructor(scene, key, x, y) {
@@ -368,7 +369,7 @@ export class Player {
       case 'dismantle': for (const o of [-0.22, 0, 0.22]) this.drawRay(g, col, [dx * Math.cos(o) - dy * Math.sin(o), dx * Math.sin(o) + dy * Math.cos(o)], 9.5); break;
       case 'cleave': {
         const c0 = P(this.x, this.y), base = Math.atan2(dy, dx), pts = [{ x: c0[0], y: c0[1] }];
-        for (let k = -1; k <= 1.001; k += 0.2) { const a = base + k * 1.2, q = P(this.x + Math.cos(a) * 2.7, this.y + Math.sin(a) * 2.7); pts.push({ x: q[0], y: q[1] }); }
+        for (let k = -1; k <= 1.001; k += 0.2) { const a = base + k * CLEAVE_ARC, q = P(this.x + Math.cos(a) * CLEAVE_RANGE, this.y + Math.sin(a) * CLEAVE_RANGE); pts.push({ x: q[0], y: q[1] }); }
         g.fillStyle(col, 0.25); g.fillPoints(pts, true); g.lineStyle(1, col, 0.9); g.strokePoints(pts, true);
         break;
       }
@@ -626,11 +627,11 @@ const POWERS = {
     pl.state = 'cast'; pl.t = 0.32; pl.animT = 0; pl.castMove = true;
     const fx = W.fx;
     pl.schedule(0.12, () => {
-      const cx = pl.x + aim[0] * 1.4, cy = pl.y + aim[1] * 1.4;
-      W.combat.arc(pl.x, pl.y, aim[0], aim[1], 2.7, 1.2, { dmg: 150, pctMax: 0.12, force: 9, lift: 160, stun: 0.8, bld: 650, mov: 999, heavy: true, src: 'cleave' });
+      const cx = pl.x + aim[0] * CLEAVE_RANGE * 0.5, cy = pl.y + aim[1] * CLEAVE_RANGE * 0.5, L = CLEAVE_RANGE * 0.45;
+      W.combat.arc(pl.x, pl.y, aim[0], aim[1], CLEAVE_RANGE, CLEAVE_ARC, { dmg: 150, pctMax: 0.12, force: 9, lift: 160, stun: 0.8, bld: 650, mov: 999, heavy: true, src: 'cleave' });
       const p = [-aim[1], aim[0]];
       for (const s of [1, -1]) {
-        const a = [cx + (aim[0] + p[0] * s) * 1.2, cy + (aim[1] + p[1] * s) * 1.2], b = [cx - (aim[0] + p[0] * s) * 1.2, cy - (aim[1] + p[1] * s) * 1.2];
+        const a = [cx + (aim[0] + p[0] * s) * L, cy + (aim[1] + p[1] * s) * L], b = [cx - (aim[0] + p[0] * s) * L, cy - (aim[1] + p[1] * s) * L];
         fx.beam(a[0], a[1], 22, b[0], b[1], 4, 0.14, 0xffffff, 3);
         fx.beam(a[0], a[1], 22, b[0], b[1], 4, 0.2, 0xff4040, 1);
         W.ground.slash(a[0], a[1], b[0], b[1], 2);
