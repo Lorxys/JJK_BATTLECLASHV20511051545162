@@ -9,6 +9,18 @@ const lerp = (a, b, t) => a + (b - a) * t;
 function limb(pb, pts, w, col) {
   for (let i = 0; i < pts.length - 1; i++) pb.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], OUTLINE, w + 2);
   for (let i = 0; i < pts.length - 1; i++) pb.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], col, w);
+  if (w < 3) return;
+  // reflet d'1 px sur le côté éclairé (haut-droite) et ombre propre de l'autre côté
+  const hi = shadeC(col, 1.22), lo = shadeC(col, 0.78), o = (w - 1) >> 1;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    const L = Math.hypot(x1 - x0, y1 - y0) || 1;
+    let nx = (y1 - y0) / L, ny = -(x1 - x0) / L;
+    if (nx - ny < 0) { nx = -nx; ny = -ny; }
+    const ax = Math.round(nx * o), ay = Math.round(ny * o);
+    pb.line(x0 + ax, y0 + ay, x1 + ax, y1 + ay, hi, 1);
+    pb.line(x0 - ax, y0 - ay, x1 - ax, y1 - ay, lo, 1);
+  }
 }
 
 const BASE = { bob: 0, lean: 0.05, nt: 0.08, nk: 0.1, ft: -0.08, fk: 0.1, nua: 0.15, nfa: 0.35, fua: -0.1, ffa: 0.1, ht: 0 };

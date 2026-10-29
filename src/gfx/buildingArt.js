@@ -210,6 +210,42 @@ function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
     return base;
   };
 
+  // Détails de façade : stores, climatiseurs, enseignes verticales, corniche, salissures et grain du crépi.
+  const st = spec.style, block = st === 'office' || st === 'apart';
+  const signU = st === 'office' && s >= 3 && hash2(s, H, 5) < 0.75 ? Math.round(fw * 0.12) : -99;
+  const signV0 = Math.round(H * 0.35), signV1 = Math.min(H - 6, signV0 + 34);
+  const detail = (f, u, v, col) => {
+    const lit = f === 'R';
+    if (f === 'R' && u >= signU && u < signU + 7 && v >= signV0 && v < signV1) { // enseigne kanji verticale
+      if (u === signU || u === signU + 6 || v === signV0 || v === signV1 - 1) return C('#2a2230');
+      const gv = (v - signV0 - 1) % 6, gi = u - signU - 1;
+      if (gv < 5 && gi < 5 && (gv === 0 || gi === 2 || hash2(gi, gv, ((v - signV0) / 6 | 0) + s) > 0.55)) { isNeon = true; return C(hash2(s, 3, 1) < 0.5 ? '#ff6a8a' : '#7fe0ff'); }
+      return C('#5a1f2a');
+    }
+    if (isWin) {
+      if (block && col !== COL.lit && hash2(winId, f === 'L' ? 21 : 23, 3) < 0.3) { // stores à moitié baissés
+        const fh = st === 'apart' ? 12 : 10, fv = v % fh;
+        if (fv >= fh - 5) { isWin = false; return fv % 2 ? (lit ? C('#d9d2bf') : C('#b3ad9c')) : (lit ? C('#c2bba8') : C('#9c9686'));}
+      }
+      if (st === 'glass' && u % 8 === 1 && v % 8 > 1) return shadeC(col, 1.12); // reflet sur le bord de la vitre
+      return col;
+    }
+    if (block) {
+      const fh = st === 'apart' ? 12 : 10, fv = v % fh, fu = u % 8, wid = (u >> 3) * 131 + Math.floor(v / fh);
+      // climatiseur sous la fenêtre
+      if (v > fh && (fv === 2 || fv === 3) && fu >= 2 && fu <= 6 && hash2(wid, f === 'L' ? 31 : 37, 4) < 0.28) {
+        if (fv === 3) return lit ? C('#e4e2dc') : C('#b8b6b0');
+        return fu % 2 ? C('#7b7d82') : (lit ? C('#cfcdc6') : C('#a3a19b'));
+      }
+      // traînée de pluie sous les fenêtres
+      if (fu >= 3 && fu <= 5 && fv < 4 && v > fh && hash2(u, wid, 6) < 0.35) col = shadeC(col, 0.92);
+    }
+    if (v >= H - 3 && st !== 'glass' && st !== 'house' && st !== 'temple') return v === H - 3 ? shadeC(col, 0.72) : shadeC(col, 1.1); // corniche
+    if (v < 5 && st !== 'glass') col = shadeC(col, 0.78 + v * 0.045); // salissure au pied du mur
+    const g = hash2(u, v, 77);
+    return g < 0.12 ? shadeC(col, 0.94) : g > 0.93 ? shadeC(col, 1.05) : col; // grain du crépi
+  };
+
   const face = (f) => (u, v, x, y) => {
     if (v < 0) return 0;
     if (state >= 3) {
@@ -218,7 +254,7 @@ function drawBox(pb, spec, key, gx, gy, state, rng, roofH) {
       if (v > c - 2) return COL.slab;
       if (v > c - 4 && (u % 5 === 0)) return COL.rebar;
     }
-    let col = pattern(f, u, v);
+    let col = detail(f, u, v, pattern(f, u, v));
     if (state >= 1) {
       if (cracks.has(f + u + ',' + v)) return COL.broken;
       if (isWin && hash2(winId, f === 'L' ? 3 : 5, state) < pBroken) {
@@ -291,10 +327,40 @@ function roofExtras(pb, spec, gx, gy, s, rng) {
     isoBox(pb, x, y - 2, 0.8, 0.8, 34, { left: (u, v) => shadeC(brick(u, v), 0.8), right: brick, top: () => C('#2a2222') });
     return;
   }
-  const n = Math.min(4, s - 1);
-  for (let i = 0; i < n; i++) {
-    const [x, y] = at(0.5 + rng() * (s - 1.3), 0.5 + rng() * (s - 1.3));
-    isoBox(pb, x, y - 2, 0.5, 0.4, 4, grey);
+  // garde-corps le long des deux bords arrière (toits plats assez grands)
+  if (s >= 3) {
+    const rail = C('#d9d6cf'), post = C('#8e8b85');
+    for (const [a0, b0, a1, b1] of [[0, 0, s, 0], [0, 0, 0, s]]) {
+      const [x0, y0] = at(a0 + 0.15, b0 + 0.15), [x1, y1] = at(a1 - (a1 ? 0.15 : -0.15), b1 - (b1 ? 0.15 : -0.15));
+      pb.line(x0, y0 - 4, x1, y1 - 4, rail);
+      const L = Math.max(Math.abs(x1 - x0), 1);
+      for (let k = 0; k <= L; k += 6) { const t = k / L, x = Math.round(x0 + (x1 - x0) * t), y = Math.round(y0 + (y1 - y0) * t); pb.line(x, y - 3, x, y, post); }
+    }
+  }
+  const free = [];
+  for (let b = 0; b < s - 0.9; b += 1) for (let a = 0; a < s - 0.9; a += 1) free.push([a + 0.2, b + 0.2]);
+  for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+  const n = Math.min(free.length, Math.max(1, Math.round(s * 1.2)));
+  // tri arrière -> avant pour que les objets se recouvrent correctement
+  const picks = free.slice(0, n).sort((p, q) => p[0] + p[1] - q[0] - q[1]);
+  for (const [a, b] of picks) {
+    const [x, y] = at(a, b), k = rng();
+    if (k < 0.22 && s >= 3) { // réservoir d'eau sur pieds
+      const tank = (u, v) => (v % 5 === 0 ? C('#7f9aa8') : C('#a9c3cf'));
+      for (const [dx, dy] of [[-5, 0], [5, 0], [0, 3]]) pb.line(x + dx, y + dy, x + dx, y + dy - 5, C('#55565c'));
+      isoBox(pb, x, y - 5, 0.55, 0.55, 9, { left: (u, v) => shadeC(tank(u, v), 0.8), right: tank, top: () => C('#c7dbe3') });
+    } else if (k < 0.55) { // climatiseur avec ventilateur
+      isoBox(pb, x, y - 1, 0.55, 0.4, 4, { left: () => C('#a8a49d'), right: (u, v) => (u % 2 ? C('#8f8c86') : C('#c6c2bb')), top: () => C('#dedad3') });
+      pb.ellipse(x - 1, y - 5, 3, 1.4, C('#4a4b50'));
+      pb.set(x - 1, y - 5, C('#9a9a9a'));
+    } else if (k < 0.75) { // bouche d'aération coudée
+      isoBox(pb, x, y - 1, 0.18, 0.18, 6, { left: () => C('#8f9196'), right: () => C('#b9bbc0'), top: () => C('#2a2b30') });
+      pb.rect(x - 2, y - 9, 4, 2, C('#a4a6ab'));
+    } else if (k < 0.88) { // cabanon d'accès à l'escalier
+      isoBox(pb, x, y - 1, 0.8, 0.8, 9, { left: (u, v) => (u > 4 && u < 9 && v < 7 ? C('#5d544e') : C('#a9a59d')), right: () => C('#c3bfb7'), top: () => C('#8e8a84') });
+    } else { // panneaux solaires
+      isoBox(pb, x, y - 1, 0.7, 0.5, 2, { left: () => C('#3a4a6a'), right: () => C('#2f3e5c'), top: (px, py) => ((px + py) % 4 === 0 ? C('#7f97c4') : C('#304a7e')) });
+    }
   }
 }
 

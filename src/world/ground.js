@@ -3,13 +3,14 @@ import { CHUNK } from '../config.js';
 import { W } from '../state.js';
 import { isoX, isoY, makeRng } from '../util.js';
 import { NIGHT_TINT } from '../game/night.js';
-import { makeTileSet, tileFor, makeCrater, makeScorch, makeCrackStamp, DMG_COLORS } from '../gfx/tiles.js';
+import { makeTileSet, tileFor, makeDecals, tileDecals, makeCrater, makeScorch, makeCrackStamp, DMG_COLORS } from '../gfx/tiles.js';
 
-let tileSet = null;
+let tileSet = null, decals = null;
 const stamps = { crater: [], scorch: [], crack: [] };
 
 export function initGroundArt() {
   tileSet = makeTileSet();
+  decals = makeDecals();
   for (let r = 1; r <= 4; r++) {
     stamps.crater.push([0, 1, 2].map((s) => makeCrater(r * 0.7, r * 100 + s)));
     stamps.scorch.push([0, 1].map((s) => makeScorch(r * 0.8, r * 200 + s)));
@@ -45,13 +46,19 @@ export class Ground {
 
   redrawAll() {
     const N = this.map.n;
+    // cases occupées par un bâtiment, pour l'ombre de contact au pied des murs
+    const occ = new Uint8Array(N * N);
+    for (const b of this.map.buildings) for (let j = 0; j < b.s; j++) for (let i = 0; i < b.s; i++) occ[(b.y + j) * N + b.x + i] = 1;
+    const isB = (x, y) => x >= 0 && y >= 0 && x < N && y < N && occ[y * N + x] === 1;
     for (const ch of this.chunks) {
       ch.ctx.clearRect(0, 0, ch.w, ch.h);
       const a = ch.cx * CHUNK, b = ch.cy * CHUNK;
       for (let y = b; y < b + CHUNK; y++) {
         for (let x = a; x < a + CHUNK; x++) {
           if (x >= N || y >= N) continue;
-          ch.ctx.drawImage(tileFor(tileSet, this.map, x, y), isoX(x, y) - 16 - ch.left, isoY(x, y) - ch.top);
+          const px = isoX(x, y) - 16 - ch.left, py = isoY(x, y) - ch.top;
+          ch.ctx.drawImage(tileFor(tileSet, this.map, x, y), px, py);
+          if (!occ[y * N + x]) for (const d of tileDecals(decals, this.map, x, y, isB)) ch.ctx.drawImage(d, px, py);
         }
       }
       ch.tex.refresh();

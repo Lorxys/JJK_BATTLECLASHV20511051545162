@@ -178,3 +178,106 @@ export function makeCrackStamp(seed) {
   return pb.toCanvas();
 }
 export const DMG_COLORS = DMG;
+
+// --- Détails superposés aux cases (32x16, même cadrage qu'une case) ---
+// Choisis par tileDecals() selon le type de sol, la position et les cases voisines.
+function decal(seed, fn) {
+  const pb = new PB(32, 16);
+  const rng = makeRng(seed);
+  for (let Y = 0; Y < 16; Y++) for (let X = 0; X < 32; X++) {
+    if (!inDiamond(X, Y)) continue;
+    const [tx, ty] = local(X, Y);
+    const c = fn(X, Y, tx, ty, hash2(X, Y, seed), rng);
+    if (c) pb.set(X, Y, c);
+  }
+  return pb.toCanvas();
+}
+const A = (hex, a) => C(hex + Math.round(a * 255).toString(16).padStart(2, '0'));
+
+export function makeDecals() {
+  const D = {};
+  const many = (k, n, f) => { D[k] = []; for (let i = 0; i < n; i++) D[k].push(f(i)); };
+  // plaque d'égout : disque en fonte quadrillé avec rebord
+  D.manhole = [decal(1, (X, Y) => {
+    const d = Math.hypot((X + 0.5 - 16) / 6, (Y + 0.5 - 8) / 3);
+    if (d > 1) return 0;
+    if (d > 0.8) return C('#6b6d75');
+    return (X + Y) % 3 === 0 ? C('#2c2d33') : C('#3c3e45');
+  })];
+  // grille d'évacuation le long du trottoir
+  D.grate = [decal(2, (X, Y, tx, ty) => (tx > 0.4 && tx < 0.62 && ty > 0.08 && ty < 0.22 ? (X % 2 ? C('#1e1f24') : C('#5a5c63')) : 0))];
+  // fissures dans l'asphalte
+  many('crack', 3, (s) => {
+    const pb = new PB(32, 16), rng = makeRng(30 + s);
+    let x = 8 + rng() * 16, y = 5 + rng() * 6, a = rng() * 6.28;
+    for (let i = 0; i < 16; i++) { a += (rng() - 0.5) * 1.1; x += Math.cos(a); y += Math.sin(a) * 0.5; if (inDiamond(x | 0, y | 0)) pb.set(x, y, C('#34363d')); if (rng() < 0.2 && inDiamond((x | 0) + 1, y | 0)) pb.set(x + 1, y, C('#5d5f67')); }
+    return pb.toCanvas();
+  });
+  // taches d'huile
+  many('oil', 2, (s) => decal(40 + s, (X, Y) => {
+    const d = Math.hypot((X + 0.5 - 15 - s * 3) / (5 + s), (Y + 0.5 - 8) / (2.4 + s * 0.5)) + hash2(X, Y, 41 + s) * 0.35;
+    return d < 0.9 ? A('#26272d', d < 0.5 ? 0.55 : 0.35) : 0;
+  }));
+  // trottoir : dalles fendues, chewing-gums, feuilles mortes
+  many('sideDirt', 3, (s) => decal(50 + s, (X, Y, tx, ty, h) => {
+    if (h < 0.025) return C('#8e8a82');
+    if (s === 2 && h > 0.985) return [C('#c9772e'), C('#a8572a'), C('#d9a441')][(X + Y) % 3];
+    return 0;
+  }));
+  // herbe : touffes, fleurs blanches, jaunes et roses
+  many('tuft', 4, (s) => {
+    const pb = new PB(32, 16), rng = makeRng(60 + s);
+    for (let k = 0; k < 7; k++) {
+      const x = 6 + rng() * 20 | 0, y = 4 + rng() * 9 | 0;
+      if (!inDiamond(x, y) || !inDiamond(x, y - 2)) continue;
+      pb.set(x, y, C('#3f7f30')); pb.set(x, y - 1, C('#4f9a3c')); pb.set(x + 1, y - 1, C('#79c45a'));
+      if (rng() < 0.3) pb.set(x - 1, y - 2, C('#8fd66b'));
+    }
+    if (s >= 2) for (let k = 0; k < 4; k++) {
+      const x = 6 + rng() * 20 | 0, y = 4 + rng() * 9 | 0;
+      if (inDiamond(x, y)) pb.set(x, y, [C('#f6f4ea'), C('#f2d34a'), C('#f2a6c8')][(k + s) % 3]);
+    }
+    return pb.toCanvas();
+  });
+  // ombre portée au pied d'un bâtiment (bord de la case qui touche le mur) et bordure de trottoir
+  const edge = (side, w, col) => decal(70, (X, Y, tx, ty, h) => {
+    const d = side === 'xm' ? tx : side === 'ym' ? ty : side === 'xp' ? 1 - tx : 1 - ty;
+    if (d > w) return 0;
+    return typeof col === 'function' ? col(d / w, h) : col;
+  });
+  for (const s of ['xm', 'ym']) D['ao_' + s] = [edge(s, 0.34, (k, h) => (h > k * 0.9 ? A('#0a0c18', 0.42 - k * 0.3) : 0))];
+  for (const s of ['xm', 'ym', 'xp', 'yp']) {
+    D['curb_' + s] = [edge(s, 0.07, C('#e2ded4'))];          // arête claire du trottoir
+    D['gutter_' + s] = [edge(s, 0.08, A('#121318', 0.45))];  // caniveau sombre côté route
+  }
+  return D;
+}
+
+// Liste des détails à poser sur la case (x, y).
+export function tileDecals(D, map, x, y, isBuilding) {
+  const N = map.n, t = map.ground[y * N + x], h = hash2(x, y, 91);
+  const at = (a, b) => (a >= 0 && b >= 0 && a < N && b < N ? map.ground[b * N + a] : -1);
+  const out = [];
+  const pick = (k) => D[k][Math.floor(hash2(x, y, 92) * D[k].length)];
+  if (t === T.ROAD) {
+    if (h < 0.035) out.push(D.manhole[0]);
+    else if (h < 0.11) out.push(pick('crack'));
+    else if (h < 0.16) out.push(pick('oil'));
+    for (const [dx, dy, s] of [[-1, 0, 'xm'], [1, 0, 'xp'], [0, -1, 'ym'], [0, 1, 'yp']]) if (at(x + dx, y + dy) === T.SIDEWALK) {
+      out.push(D['gutter_' + s][0]);
+      if (h > 0.9 && (s === 'xm' || s === 'ym')) out.push(D.grate[0]);
+    }
+  } else if (t === T.SIDEWALK) {
+    if (h < 0.4) out.push(pick('sideDirt'));
+    for (const [dx, dy, s] of [[-1, 0, 'xm'], [1, 0, 'xp'], [0, -1, 'ym'], [0, 1, 'yp']]) if (at(x + dx, y + dy) === T.ROAD) out.push(D['curb_' + s][0]);
+  } else if (t === T.GRASS || t === T.FIELD) {
+    if (h < 0.6) out.push(pick('tuft'));
+  } else if (t === T.PARKING || t === T.CONCRETE) {
+    if (h < 0.12) out.push(pick('oil'));
+    else if (h < 0.2) out.push(pick('crack'));
+  }
+  // ombre de contact des murs visibles des bâtiments voisins
+  if (isBuilding(x - 1, y)) out.push(D.ao_xm[0]);
+  if (isBuilding(x, y - 1)) out.push(D.ao_ym[0]);
+  return out;
+}

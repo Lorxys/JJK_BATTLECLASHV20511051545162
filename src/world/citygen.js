@@ -194,12 +194,16 @@ export function generateCity(seed = 1337) {
       if (t === T.SIDEWALK && !blocked[idx(x, y)]) {
         const corner = sideBand(x) && sideBand(y);
         const d = districtAt(x, y);
-        if (corner) { if (rng() < 0.5) addP(x + 0.5, y + 0.5, 'sign'); continue; }
+        if (corner) { const k = rng(); if (k < 0.35) addP(x + 0.5, y + 0.5, 'sign'); else if (k < 0.7) addP(x + 0.5, y + 0.5, 'traffic'); continue; }
         if ((x + y) % 6 === 0) addP(x + 0.5, y + 0.5, 'lamp');
+        else if ((x + y) % 6 === 3 && (d === 'R' || d === 'K' || d === 'I')) addP(x + 0.5, y + 0.5, 'pole');
         else if ((d === 'R' || d === 'P') && (x * 7 + y * 3) % 9 === 0) addP(x + 0.5, y + 0.5, d === 'P' ? 'tree_cherry' : 'tree_round');
         else if (d === 'K' && rng() < 0.05) addM(x + 0.5, y + 0.5, 'vending', 0);
         else if (rng() < 0.025) addP(x + 0.5, y + 0.5, 'hydrant');
         else if (rng() < 0.02) addP(x + 0.5, y + 0.5, 'bin');
+        else if ((d === 'C' || d === 'K') && rng() < 0.04) addP(x + 0.5, y + 0.5, 'plant');
+        else if ((d === 'R' || d === 'K' || d === 'P') && rng() < 0.03) addP(x + 0.5, y + 0.5, 'bike');
+        else if (rng() < 0.012) addP(x + 0.5, y + 0.5, 'mailbox');
       } else if (t === T.PROM && rng() < 0.08 && Math.min(x, y, N - 1 - x, N - 1 - y) === 2) {
         addP(x + 0.5, y + 0.5, 'lamp');
       }

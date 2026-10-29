@@ -38,6 +38,7 @@ export class Night {
     const city = W.city;
     if (city) {
       for (const p of city.props) if (p.type === 'lamp' && !p.broken && p.img.visible) this.add(p.x + 0.15, p.y + 0.15, 2.8, 0xffc870, 0.3, 0.15);
+      for (const p of city.props) if (p.type === 'traffic' && !p.broken && p.img.visible) this.add(p.x + 0.3, p.y + 0.3, 0.9, 0x7dffa8, 0.16, 0.08);
       for (const b of city.buildings) {
         if (!b.img.visible) continue;
         if (b.glowPool && b.state < 3) this.add(b.x + b.s + 0.2, b.y + b.s * 0.5, b.s * 0.8, b.glowPool, 0.16);

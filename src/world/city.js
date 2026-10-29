@@ -7,9 +7,11 @@ import { buildingTex, originOf, ART } from '../gfx/registry.js';
 import { settings } from '../settings.js';
 import { NIGHT_TINT } from '../game/night.js';
 
+const PROP_GLOW = { lamp: 'lamp_glow', traffic: 'traffic_glow' };
 const BROKEN = {
   tree_round: 'stump', tree_cherry: 'stump', tree_pine: 'stump', bush: 'bush_b', lamp: 'lamp_b', hydrant: 'hydrant_b',
   sign: 'sign_b', bin: 'bin_b', bench: 'bench_b', fence_x: 'fence_x_b', fence_y: 'fence_y_b', torii: 'torii_b',
+  pole: 'pole_b', traffic: 'traffic_b', bike: 'bike_b', plant: 'plant_b', mailbox: 'mailbox_b',
 };
 const MOV = {
   car: { r: 0.42, mass: 1, hp: 60, explode: true },
@@ -46,7 +48,8 @@ export class City {
       const [ox, oy] = originOf(d.type);
       const x = Math.round(isoX(d.x, d.y)), y = Math.round(isoY(d.x, d.y));
       const img = scene.add.image(x, y, d.type).setOrigin(ox, oy).setDepth(depthOf(d.x, d.y)).setTint(NIGHT_TINT);
-      const glow = d.type === 'lamp' ? scene.add.image(x, y, 'lamp_glow').setOrigin(ox, oy).setDepth(depthOf(d.x, d.y) + 0.01) : null;
+      const gk = PROP_GLOW[d.type];
+      const glow = gk ? scene.add.image(x, y, gk).setOrigin(ox, oy).setDepth(depthOf(d.x, d.y) + 0.01) : null;
       return { x: d.x, y: d.y, type: d.type, img, glow, broken: false, spray: 0 };
     });
     this.propGrid = new Map();
@@ -215,7 +218,7 @@ export class City {
       fx.debris(p.x, p.y, 18, 8, 'leaf', force);
       for (let i = 0; i < 6; i++) fx.spawn('px2', p.x, p.y, 14 + Math.random() * 10, rand(-1, 1) * force, rand(-1, 1) * force, rand(30, 80), 1.2,
         { tint: p.type === 'tree_cherry' ? 0xf0a6c4 : 0x5fa84a, g: 200, debris: true });
-    } else if (p.type === 'lamp') { fx.sparks(p.x, p.y, 30, 8, 0xfff2b0); fx.debris(p.x, p.y, 20, 4, 'metal'); }
+    } else if (p.type === 'lamp' || p.type === 'pole' || p.type === 'traffic') { fx.sparks(p.x, p.y, 30, 8, 0xfff2b0); fx.debris(p.x, p.y, 20, 4, 'metal'); }
     else if (p.type === 'hydrant') { p.spray = 8; fx.debris(p.x, p.y, 4, 3, 'metal'); }
     else fx.debris(p.x, p.y, 6, 5, p.type.startsWith('fence') ? 'metal' : 'concrete', force);
   }

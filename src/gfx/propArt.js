@@ -55,6 +55,54 @@ function street() {
   pb = new PB(8, 11); pb.rect(1, 2, 6, 8, C('#3f8a5a')); pb.rect(1, 2, 6, 2, C('#2c6a42')); pb.rect(1, 5, 2, 5, C('#2f7049')); put('bin', pb, 4, 10);
   pb = new PB(12, 7); pb.rect(1, 2, 9, 4, C('#3f8a5a')); pb.set(10, 5, C('#c9c3b6')); put('bin_b', pb, 6, 6);
 
+  // Poteau électrique en béton : traverses, isolateurs, transformateur et départs de câbles
+  const conc = C('#8f8a82'), concL = C('#b5b0a6'), wire = C('#1f2026');
+  pb = new PB(30, 60);
+  pb.rect(14, 4, 3, 55, conc); pb.rect(16, 4, 1, 55, concL);
+  for (const y of [9, 16]) { pb.rect(6, y, 19, 2, C('#6a6660')); for (const x of [7, 12, 19, 23]) pb.rect(x, y - 2, 1, 2, C('#e9e4da')); }
+  pb.rect(17, 22, 5, 7, C('#7c8a8e')); pb.rect(17, 22, 5, 1, C('#a6b3b6')); pb.rect(18, 29, 3, 1, C('#4a5356'));
+  for (const [x, y] of [[7, 7], [23, 7], [7, 14], [23, 14]]) pb.line(x, y, x < 15 ? 0 : 29, y + 3, wire);
+  pb.rect(13, 34, 5, 6, C('#e7d34c')); pb.rect(14, 35, 3, 1, C('#2a2a2a')); pb.rect(14, 37, 3, 1, C('#2a2a2a')); // plaque de numéro
+  pb.rect(12, 57, 7, 2, C('#5a564f'));
+  put('pole', pb, 15, 58);
+  pb = new PB(36, 14); pb.line(3, 11, 30, 6, conc, 3); pb.line(4, 9, 30, 4, concL); pb.rect(26, 2, 2, 9, C('#6a6660')); put('pole_b', pb, 4, 11);
+
+  // Feu tricolore suspendu au bout d'une potence
+  pb = new PB(26, 44);
+  pb.rect(4, 6, 2, 37, pole); pb.rect(5, 6, 1, 37, poleL); pb.rect(4, 6, 18, 2, pole);
+  pb.rect(13, 8, 11, 5, C('#2b2d33')); pb.rect(13, 8, 11, 1, C('#4a4d55'));
+  for (const [x, c] of [[14, '#5a1c1c'], [17, '#5a4a1c'], [20, '#1c4a2a']]) pb.rect(x, 9, 2, 2, C(c));
+  pb.rect(6, 22, 4, 6, C('#2b2d33')); pb.rect(7, 23, 2, 2, C('#5a1c1c')); // feu piéton
+  pb.rect(3, 41, 4, 2, C('#3d4048'));
+  put('traffic', pb, 5, 42);
+  pb = new PB(26, 44); pb.rect(20, 9, 2, 2, C('#7dffa8')); pb.rect(7, 25, 2, 2, C('#ff6a5a')); put('traffic_glow', pb, 5, 42, false);
+  pb = new PB(28, 10); pb.line(2, 8, 20, 5, pole, 2); pb.rect(19, 2, 8, 4, C('#2b2d33')); put('traffic_b', pb, 3, 8);
+
+  // Vélo garé (roues, cadre rouge, panier)
+  pb = new PB(20, 14);
+  pb.ellipse(4.5, 9.5, 3.5, 3.5, (x, y, dx, dy) => (dx * dx + dy * dy > 0.45 ? C('#26262c') : 0));
+  pb.ellipse(15.5, 9.5, 3.5, 3.5, (x, y, dx, dy) => (dx * dx + dy * dy > 0.45 ? C('#26262c') : 0));
+  const frame = C('#c9483c');
+  pb.line(4, 9, 8, 5, frame); pb.line(8, 5, 14, 5, frame); pb.line(8, 5, 10, 9, frame); pb.line(10, 9, 14, 5, frame); pb.line(14, 5, 15, 9, frame);
+  pb.rect(7, 3, 3, 1, C('#2a2a2a')); pb.line(14, 5, 14, 2, C('#9a9aa2')); pb.rect(13, 1, 4, 1, C('#9a9aa2'));
+  pb.rect(15, 2, 4, 3, C('#b8b8c0')); pb.rect(15, 3, 4, 1, C('#8a8a92'));
+  put('bike', pb, 10, 13);
+  pb = new PB(20, 8); pb.ellipse(5, 5, 3.5, 2, C('#26262c')); pb.line(6, 4, 16, 6, frame); pb.ellipse(15, 6, 3, 1.5, C('#26262c')); put('bike_b', pb, 10, 7);
+
+  // Plante en pot (bac en céramique, feuillage)
+  pb = new PB(14, 18);
+  pb.rect(3, 11, 8, 6, C('#b0653e')); pb.rect(3, 11, 8, 1, C('#d08a5e')); pb.rect(3, 13, 2, 4, C('#8a4b2e'));
+  pb.ellipse(7, 7, 5.5, 5, (x, y, dx, dy) => (dy < -0.3 && dx > -0.3 ? C('#7cc65c') : dx < -0.3 || dy > 0.5 ? C('#2f6e2c') : hash2(x, y, 9) < 0.2 ? C('#68b04c') : C('#46913a')));
+  put('plant', pb, 7, 17);
+  pb = new PB(14, 8); pb.rect(2, 4, 4, 3, C('#b0653e')); pb.rect(7, 5, 4, 2, C('#8a4b2e')); pb.rect(4, 2, 4, 2, C('#46913a')); put('plant_b', pb, 7, 7);
+
+  // Boîte aux lettres rouge
+  pb = new PB(10, 18);
+  pb.rect(2, 3, 6, 11, C('#d6362b')); pb.rect(2, 3, 6, 2, C('#ef6a5a')); pb.rect(2, 5, 2, 9, C('#a8251d')); pb.rect(3, 7, 4, 1, C('#2a1616'));
+  pb.rect(4, 14, 2, 3, C('#3d4048'));
+  put('mailbox', pb, 5, 17);
+  pb = new PB(12, 7); pb.rect(1, 2, 9, 4, C('#d6362b')); pb.rect(1, 4, 9, 1, C('#a8251d')); put('mailbox_b', pb, 6, 6);
+
   // Banc (iso, selon x)
   pb = new PB(30, 18);
   const wood = { left: () => C('#8a5a32'), right: () => C('#b07a48'), top: () => C('#c48d58') };
