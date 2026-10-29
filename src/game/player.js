@@ -431,7 +431,7 @@ const POWERS = {
     pl.effects.push({
       update(dt) {
         if (reg.dead) return false;
-        t += dt;
+        t += dt; reg.t = t;
         const s = t < charge ? 0.4 + (t / charge) * 0.8 : 1.2 + Math.sin(t * 30) * 0.15;
         orb.setScale(Math.round(s * 4) / 4);
         placeImg(orb, tx, ty, 18);

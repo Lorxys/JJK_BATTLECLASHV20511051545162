@@ -27,6 +27,6 @@ export function runTest(qs) {
   }, step);
   setInterval(() => {
     const err = document.getElementById('errlog').textContent;
-    document.title = `V${W.fusions || 0} b${W.player.blues.length} s${W.player.state} F${Math.round(W.scene.game.loop.actualFps)} T${W.time.toFixed?.(1)} E${W.enemies.count} C${W.chaos.level} B${W.city.buildings.filter((b) => b.state > 0).length} ${err ? 'ERR ' + err.slice(0, 120) : 'OK'}`;
+    document.title = `V${W.fusions || 0} b${W.player.blues.length}:${(W.player.blues[0]?.t || 0).toFixed(1)} gt${(W.gameTime || 0).toFixed(1)} s${W.player.state} F${Math.round(W.scene.game.loop.actualFps)} T${W.time.toFixed?.(1)} E${W.enemies.count} C${W.chaos.level} B${W.city.buildings.filter((b) => b.state > 0).length} ${err ? 'ERR ' + err.slice(0, 120) : 'OK'}`;
   }, 200);
 }
