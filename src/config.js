@@ -55,8 +55,8 @@ export const KITS = {
     name: 'Gojo Satoru', kanji: '五条悟',
     speed: 4.6,
     powers: [
-      { id: 'blue', name: 'Bleu', kanji: '蒼', cd: 0, color: '#3d8bff' },
-      { id: 'red', name: 'Rouge', kanji: '赫', cd: 0, color: '#ff3b3b' },
+      { id: 'blue', name: 'Bleu', kanji: '蒼', cd: 5, color: '#3d8bff' },
+      { id: 'red', name: 'Rouge', kanji: '赫', cd: 5, color: '#ff3b3b' },
       { id: 'purple', name: 'Violet', kanji: '茈', cd: 22, color: '#a24bff' },
       { id: 'domain', name: 'Unlimited Void', kanji: '無量空処', cd: DOMAIN.voidCooldown, color: '#6b8cff' },
     ],

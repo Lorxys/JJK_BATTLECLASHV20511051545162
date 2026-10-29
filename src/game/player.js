@@ -425,7 +425,7 @@ const POWERS = {
     const orb = img('orb_blue');
     const fx = W.fx;
     let t = 0, tick = 0;
-    const charge = 0.35, dur = 1.9, R = 4.6;
+    const charge = 0.35, dur = 4.5, R = 4.6; // Bleu tenu plus longtemps (recharge de 5 s)
     const reg = { x: tx, y: ty, dead: false }; // repérable par le Rouge pour la fusion en Violet
     pl.blues.push(reg);
     pl.effects.push({
