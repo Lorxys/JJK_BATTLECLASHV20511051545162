@@ -89,6 +89,7 @@ export class UI {
       case 'quit': this.confirm('Quitter vers le menu principal ? La session en cours sera perdue.', () => W.game.quit()); break;
       case 'set': {
         const opts = { quality: ['auto', 'low', 'medium', 'high'], effects: ['reduced', 'normal', 'max'], debris: ['few', 'normal', 'many'] };
+        if (v === 'hd') { s.hd = !s.hd; saveSettings(); location.reload(); break; } // le rendu se choisit au démarrage
         if (opts[v]) { const o = opts[v]; s[v] = o[(o.indexOf(s[v]) + 1) % o.length]; }
         else s[v] = !s[v];
         saveSettings(); W.game.applySettings(); this.show('settings');
@@ -207,6 +208,7 @@ export class UI {
     const row = (lbl, key, val) => `<div class="srow"><span>${lbl}</span><button class="pbtn small" data-a="set" data-v="${key}">${val}</button></div>`;
     return `<div class="scr"><div class="panel wide"><div class="p-title">Paramètres</div>
       <div class="settings">
+        ${row('Rendu', 'hd', s.hd ? 'HD lisse' : 'Pixel')}
         ${row('Qualité', 'quality', L[s.quality])}
         ${row('Effets', 'effects', L[s.effects])}
         ${row('Ombres', 'shadows', s.shadows ? 'Oui' : 'Non')}

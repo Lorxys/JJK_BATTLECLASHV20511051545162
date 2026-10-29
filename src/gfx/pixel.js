@@ -174,3 +174,32 @@ export function isoBox(pb, gx, gy, a, b, h, faces) {
   }
   return { top, right, left, bottom };
 }
+
+// Agrandissement x2 « Scale2x » (EPX) : double la définition en arrondissant les diagonales
+// sans flou, pour le rendu HD lisse.
+export function scale2x(src) {
+  const w = src.width, h = src.height;
+  const s = new Uint32Array(src.getContext('2d').getImageData(0, 0, w, h).data.buffer);
+  const W2 = w * 2, img = new ImageData(W2, h * 2), d = new Uint32Array(img.data.buffer);
+  for (let y = 0; y < h; y++) {
+    const up = y > 0 ? y - 1 : y, dn = y < h - 1 ? y + 1 : y;
+    for (let x = 0; x < w; x++) {
+      const P = s[y * w + x];
+      const A = s[up * w + x], D = s[dn * w + x];
+      const C = s[y * w + (x > 0 ? x - 1 : x)], B = s[y * w + (x < w - 1 ? x + 1 : x)];
+      let e0 = P, e1 = P, e2 = P, e3 = P;
+      if (A !== D && C !== B) {
+        if (C === A) e0 = A;
+        if (A === B) e1 = B;
+        if (D === C) e2 = C;
+        if (B === D) e3 = D;
+      }
+      const o = y * 2 * W2 + x * 2;
+      d[o] = e0; d[o + 1] = e1; d[o + W2] = e2; d[o + W2 + 1] = e3;
+    }
+  }
+  const cv = document.createElement('canvas');
+  cv.width = W2; cv.height = h * 2;
+  cv.getContext('2d').putImageData(img, 0, 0);
+  return cv;
+}

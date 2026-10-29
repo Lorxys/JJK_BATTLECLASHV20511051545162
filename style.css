@@ -15,6 +15,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0a14; col
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
 #game { position: fixed; inset: 0; }
 #game canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.hd #game canvas { image-rendering: auto; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
 .hidden { display: none !important; }
 canvas { image-rendering: pixelated; }

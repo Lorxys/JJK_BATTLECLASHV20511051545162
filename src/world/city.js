@@ -75,10 +75,10 @@ export class City {
     return m;
   }
   placeMovable(m) {
-    m.img.setPosition(Math.round(isoX(m.x, m.y)), Math.round(isoY(m.x, m.y) - m.z)).setDepth(depthOf(m.x, m.y) + (m.held ? 40 : 0));
+    m.img.setPosition(isoX(m.x, m.y), isoY(m.x, m.y) - m.z).setDepth(depthOf(m.x, m.y) + (m.held ? 40 : 0));
     const show = this.shadows && (m.z > 2 || m.held);
     m.shadow.setVisible(show && m.img.visible);
-    if (show) m.shadow.setPosition(Math.round(isoX(m.x, m.y)), Math.round(isoY(m.x, m.y)));
+    if (show) m.shadow.setPosition(isoX(m.x, m.y), isoY(m.x, m.y));
   }
 
   // --- Collisions ---

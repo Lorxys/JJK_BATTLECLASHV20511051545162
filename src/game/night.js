@@ -1,7 +1,8 @@
-// Ville de nuit : décor assombri par teinte (clair de lune bleuté) et éclairage additif en paliers nets
-// (pas de dégradé lisse) : lampadaires, vitrines, feux, territoires et techniques.
+// Ville de nuit : décor assombri par teinte (clair de lune bleuté) et éclairage additif (halos doux en HD,
+// paliers nets en rendu pixel) : lampadaires, vitrines, feux, territoires et techniques.
 import { W } from '../state.js';
 import { isoX, isoY } from '../util.js';
+import { settings } from '../settings.js';
 
 export const NIGHT_TINT = 0x5c6698;  // bâtiments, sol, mobilier, véhicules
 export const CHAR_TINT = 0xbcc4e4;   // personnages : plus clairs pour rester lisibles
@@ -22,6 +23,9 @@ export class Night {
     this.lights = [];   // lumières de l'image courante
     this.flashes = [];  // lumières qui s'éteignent d'elles-mêmes
     this.t = 0;
+    this.soft = settings().hd;
+    this.pool = [];
+    if (this.soft) this.makeGlowTex();
     scene.cameras.main.setBackgroundColor('#0b1430');
   }
 
@@ -70,10 +74,17 @@ export class Night {
     const g = this.ground, top = this.top;
     g.clear(); top.clear();
     const v = cam.worldView, m = 60;
+    let n = 0;
     for (const l of this.lights) {
       const cx = isoX(l.x, l.y), cy = isoY(l.x, l.y), w = l.r * SX, h = l.r * SY;
       if (cx + w / 2 < v.x - m || cx - w / 2 > v.right + m || cy + h / 2 < v.y - m || cy - h / 2 > v.bottom + m) continue;
-      // trois paliers additifs : bord faible, milieu, cœur lumineux
+      if (this.soft) {
+        // HD : halo à dégradé doux (une image additive par lumière, recyclée d'une image à l'autre)
+        this.glow(n++, false, cx, cy, w, h, l.color, Math.min(1, l.a * 1.6));
+        if (l.top) this.glow(n++, true, cx, cy - 10, w * 0.95, h * 1.7, l.color, Math.min(1, l.a * l.top * 1.4));
+        continue;
+      }
+      // pixel : trois paliers additifs nets (bord faible, milieu, cœur lumineux)
       const a = l.a / 3;
       g.fillStyle(l.color, a);
       g.fillEllipse(cx, cy, w, h, 20);
@@ -86,7 +97,25 @@ export class Night {
         top.fillEllipse(cx, cy - 10, w * 0.5, h * 0.9, 14);
       }
     }
+    for (let i = n; i < this.pool.length; i++) if (this.pool[i].visible) this.pool[i].setVisible(false);
   }
 
-  clear() { this.lights.length = 0; this.flashes.length = 0; this.ground.clear(); this.top.clear(); }
+  glow(i, top, x, y, w, h, color, a) {
+    let im = this.pool[i];
+    if (!im) im = this.pool[i] = this.scene.add.image(0, 0, 'night_glow').setBlendMode(1);
+    im.setPosition(x, y).setDisplaySize(w, h).setTint(color).setAlpha(a).setDepth(top ? 9e5 - 6 : -8.9e5).setVisible(true);
+  }
+
+  // Texture de halo : disque blanc au dégradé radial doux (cœur plus dense).
+  makeGlowTex() {
+    if (this.scene.textures.exists('night_glow')) return;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    const c = cv.getContext('2d'), gr = c.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.7)');
+    gr.addColorStop(0.6, 'rgba(255,255,255,0.25)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gr; c.fillRect(0, 0, 128, 128);
+    this.scene.textures.addCanvas('night_glow', cv);
+  }
+
+  clear() { this.lights.length = 0; this.flashes.length = 0; this.ground.clear(); this.top.clear(); for (const im of this.pool) im.setVisible(false); }
 }

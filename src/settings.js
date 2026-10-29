@@ -2,6 +2,7 @@
 const KEY = 'gojo-sukuna-settings-v1';
 
 export const DEFAULTS = {
+  hd: true,             // rendu HD lisse (true) ou pixel art brut (false)
   quality: 'auto',      // auto | low | medium | high
   effects: 'normal',    // reduced | normal | max
   shadows: true,

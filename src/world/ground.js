@@ -34,6 +34,7 @@ export class Ground {
           canvas = document.createElement('canvas');
           canvas.width = CHUNK * 32; canvas.height = CHUNK * 16;
           tex = scene.textures.addCanvas(key, canvas);
+          tex.setFilter(Phaser.Textures.FilterMode.NEAREST); // sol : texels nets, même en rendu HD
         } else canvas = tex.getSourceImage();
         const img = scene.add.image(left, top, key).setOrigin(0, 0).setDepth(-1e6).setTint(NIGHT_TINT);
         this.chunks.push({ cx, cy, left, top, w: canvas.width, h: canvas.height, canvas, ctx: canvas.getContext('2d'), tex, img, dirty: false });

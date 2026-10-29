@@ -53,7 +53,7 @@ export class FX {
     return p;
   }
   place(p) {
-    p.img.setPosition(Math.round(isoX(p.x, p.y)), Math.round(isoY(p.x, p.y) - p.z));
+    p.img.setPosition(isoX(p.x, p.y), isoY(p.x, p.y) - p.z);
     p.img.setDepth(p.top ? FX_DEPTH - 1 : depthOf(p.x, p.y) + 3);
   }
   kill(p, i = this.live.indexOf(p)) {

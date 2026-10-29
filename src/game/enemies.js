@@ -457,7 +457,7 @@ export class Enemies {
         p.img.destroy(); this.proj.splice(i, 1);
         continue;
       }
-      p.img.setPosition(Math.round(isoX(p.x, p.y)), Math.round(isoY(p.x, p.y) - p.z)).setDepth(depthOf(p.x, p.y) + 5);
+      p.img.setPosition(isoX(p.x, p.y), isoY(p.x, p.y) - p.z).setDepth(depthOf(p.x, p.y) + 5);
     }
     // objets lancés par un Colosse
     if (!P) return;
@@ -473,7 +473,7 @@ export class Enemies {
   }
 
   render(e, dt) {
-    const sx = Math.round(isoX(e.x, e.y)), sy = Math.round(isoY(e.x, e.y));
+    const sx = isoX(e.x, e.y), sy = isoY(e.x, e.y);
     const hover = e.def.hover ? e.def.hover + Math.sin(e.animT * 3) * 2 : 0;
     let jitter = 0;
     const st = e.state;

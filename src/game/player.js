@@ -399,7 +399,7 @@ export class Player {
     let fi = Math.floor(this.animT * a.fps);
     if (name === 'fuga' || a.hold) fi = fi < frames.length - 2 ? fi : frames.length - 2 + (fi % 2); // pose tenue qui vibre
     else fi = loop ? fi % frames.length : Math.min(frames.length - 1, fi);
-    const X = Math.round(isoX(this.x, this.y)), Y = Math.round(isoY(this.x, this.y));
+    const X = isoX(this.x, this.y), Y = isoY(this.x, this.y);
     this.sprite.setFrame(frames[fi]).setFlipX(sx < 0).setPosition(X, Y - Math.round(this.z)).setDepth(depthOf(this.x, this.y) + 1);
     this.shadow.setPosition(X, Y).setVisible(settings().shadows);
     if (this.flash > 0) { this.flash -= 1 / 60; this.sprite.setTintFill(0xffffff); }
@@ -420,7 +420,7 @@ function img(key, scale = 1) { return W.scene.add.image(0, 0, key).setScale(scal
 // Lumière émise la nuit par les orbes et projectiles : [couleur, rayon].
 const ORB_LIGHT = { orb_blue: [0x3d8bff, 3.5], orb_red: [0xff3b3b, 3.5], orb_purple: [0xa24bff, 6], fire_arrow: [0xff8a1e, 5] };
 function placeImg(im, x, y, z) {
-  im.setPosition(Math.round(isoX(x, y)), Math.round(isoY(x, y) - z)).setDepth(depthOf(x, y) + 6);
+  im.setPosition(isoX(x, y), isoY(x, y) - z).setDepth(depthOf(x, y) + 6);
   const l = ORB_LIGHT[im.texture.key];
   if (l && W.night) W.night.add(x, y, l[1] * (im.scaleX || 1), l[0], 0.42, 0.6);
 }

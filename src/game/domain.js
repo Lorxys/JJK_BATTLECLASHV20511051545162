@@ -49,8 +49,7 @@ export class Domain {
     el.className = mode ? 'on ' + mode + ' ' + type : '';
     el.querySelector('.cap').textContent = type === 'void' ? '無量空処' : '伏魔御廚子';
     if (mode) { const c = el.querySelector(mode === 'black' ? '.k' : '.cap'); c.style.animation = 'none'; void c.offsetWidth; c.style.animation = ''; }
-    const cam = this.scene.cameras.main;
-    cam.setZoom(mode === 'shot' ? 2 : 1); // gros plan net (zoom entier)
+    this.cineZoom = mode === 'shot' ? 2 : 1; // gros plan (appliqué par la scène, en plus du zoom HD)
     // l'interface disparaît pendant la cinématique
     if (W.mode === 'play') { W.input && W.input.show(!mode); W.ui && W.ui.showHud(!mode); }
   }

@@ -41,7 +41,7 @@ Sur ordinateur, pour les tests : ZQSD/WASD pour bouger, J pour attaquer, K pour 
 ## Technique
 
 - Phaser 3 (inclus dans `vendor/`), JavaScript pur, aucune étape de compilation.
-- Tout le pixel art est généré par le code au lancement.
+- Tout le pixel art est généré par le code au lancement. En rendu « HD lisse » (par défaut, Paramètres > Rendu), chaque texture est agrandie x2 par Scale2x et affichée filtrée près de la résolution de l'écran ; le rendu « Pixel » garde les pixels bruts (plus léger).
 - Les sons et la musique sont synthétisés. Tu peux les remplacer par tes propres fichiers MP3 :
   - `audio/music_menu.mp3` : musique du menu ;
   - `audio/music_game.mp3` : musique de tout le combat. Elle démarre à 50 s et reboucle à 50 s (réglable dans `MUSIC_START`, `src/audio.js`) ;

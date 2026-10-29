@@ -1,15 +1,24 @@
 // Point d'entrée : taille interne adaptée à l'écran (agrandissement entier, pixels nets), Phaser, UI, audio.
 import { W } from './state.js';
-import { loadSettings } from './settings.js';
+import { loadSettings, settings } from './settings.js';
 import { WorldScene } from './scene.js';
 import { UI } from './ui/ui.js';
 import { Controls } from './ui/controls.js';
 import { Audio } from './audio.js';
 
-// Hauteur interne proche de 360 px, choisie pour un facteur d'agrandissement entier en pixels physiques.
+// Pixel : hauteur interne proche de 360 px, agrandie d'un facteur entier en pixels physiques.
+// HD : rendu proche de la résolution de l'écran (jusqu'à 720 px de haut) ; la caméra zoome pour garder
+// le même cadrage qu'une vue de 360 px (W.zoom).
 function gameSize() {
   const dpr = window.devicePixelRatio || 1;
   const dh = window.innerHeight * dpr, dw = window.innerWidth * dpr;
+  if (settings().hd) {
+    const k = Math.max(1, Math.ceil(dh / 720));
+    const h = Math.max(240, Math.round(dh / k)), w = Math.max(320, Math.min(2000, Math.round(dw / k)));
+    W.zoom = h / 360;
+    return [w, h];
+  }
+  W.zoom = 1;
   const k = Math.max(1, Math.round(dh / 360));
   const h = Math.max(240, Math.min(440, Math.round(dh / k)));
   const w = Math.max(320, Math.min(960, Math.round(dw / k)));
@@ -18,6 +27,7 @@ function gameSize() {
 
 function boot() {
   loadSettings();
+  if (settings().hd) document.body.classList.add('hd');
   const ui = document.getElementById('ui');
   W.audio = new Audio();
   W.ui = new UI(ui);
@@ -30,7 +40,8 @@ function boot() {
     parent: 'game',
     width: w, height: h,
     backgroundColor: '#0b1430',
-    pixelArt: true, roundPixels: true, antialias: false,
+    // HD : filtrage lisse des textures (agrandies x2 à la génération) et positions au sous-pixel
+    pixelArt: !settings().hd, roundPixels: !settings().hd, antialias: settings().hd,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { keyboard: false, mouse: false, touch: false, gamepad: false },
     audio: { noAudio: true },

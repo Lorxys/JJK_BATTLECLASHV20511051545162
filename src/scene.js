@@ -141,6 +141,9 @@ export class WorldScene extends Phaser.Scene {
   update(time, delta) {
     const real = Math.min(delta, 50) / 1000 * (W.testSpeed || 1);
     const cam = this.cameras.main;
+    // zoom HD (cadrage d'une vue de 360 px) x gros plan éventuel d'une cinématique
+    const zoom = (W.zoom || 1) * (W.domain.cineZoom || 1);
+    if (cam.zoom !== zoom) cam.setZoom(zoom);
     this.autoQuality(real);
     if (W.mode !== 'play' || (this.warmT = (this.warmT || 0) + 1) % 4 === 0) warmupStep();
 
@@ -149,7 +152,7 @@ export class WorldScene extends Phaser.Scene {
       this.menuT += real;
       const a = this.menuT * 0.04;
       const tx = isoX(48 + Math.cos(a) * 18, 48 + Math.sin(a) * 18), ty = isoY(48 + Math.cos(a) * 18, 48 + Math.sin(a) * 18);
-      cam.centerOn(Math.round(tx), Math.round(ty));
+      cam.centerOn(tx, ty);
       W.city.update(real, cam);
       W.fx.update(real);
       W.night.update(real, cam);
@@ -183,13 +186,13 @@ export class WorldScene extends Phaser.Scene {
     const tx = isoX(P.x, P.y), ty = isoY(P.x, P.y) - 16;
     const k = Math.min(1, real * 7);
     this.camX += (tx - this.camX) * k; this.camY += (ty - this.camY) * k;
-    const N = MAP_N, hw = cam.width / 2, hh = cam.height / 2;
+    const N = MAP_N, hw = cam.width / 2 / cam.zoom, hh = cam.height / 2 / cam.zoom;
     this.camX = Math.max(-N * 16 + hw, Math.min(N * 16 - hw, this.camX));
     this.camY = Math.max(hh - 60, Math.min(N * 16 - hh, this.camY));
     let sx = 0, sy = 0;
     const fx = W.fx;
     if (fx.shake > 0.2) { sx = (Math.random() - 0.5) * fx.shake * 2; sy = (Math.random() - 0.5) * fx.shake * 2; fx.shake *= Math.exp(-9 * real); } else fx.shake = 0;
-    cam.centerOn(Math.round(this.camX + sx), Math.round(this.camY + sy));
+    cam.centerOn(this.camX + sx, this.camY + sy);
 
     W.input.setCooldowns(P.cooldowns());
     W.ui.updateHud(real);

@@ -160,6 +160,10 @@ const gojoHead = (pb, hx, hy, back, P, q = {}) => {
 const sukunaHead = (pb, hx, hy, back, P, q = {}) => {
   // cheveux roses d'Itadori plaqués vers l'arrière, racines sombres sur les côtés
   const H = C('#f2a3ab'), Hd = C('#c97680'), Hl = C('#ffd0d5'), under = C('#3a2228'), mark = C('#16161f'), eye = C('#e0202a');
+  // capuche rouge de l'uniforme de Yuji, rabattue autour du cou
+  const hood = C('#c4232d'), hoodD = C('#8e1820');
+  pb.ellipse(hx + 0.5, hy + 5, 6, 2.6, OUTLINE);
+  pb.ellipse(hx + 0.5, hy + 5, 5, 1.8, (x, y, dx) => (dx < -0.2 ? hoodD : hood));
   faceBase(pb, hx + 1, hy, P);
   const spikes = [[-8, -4], [-7, -8], [-4, -11], [0, -11], [3, -9]];
   for (const [sx, sy] of spikes) pb.poly([[hx - 4, hy - 1], [hx + 4, hy - 2], [hx + sx, hy + sy]], OUTLINE);
@@ -167,6 +171,9 @@ const sukunaHead = (pb, hx, hy, back, P, q = {}) => {
   pb.ellipse(hx - 0.5, hy - 2.5, 4.6, 3, (x, y, dx) => (dx < -0.3 ? Hd : H));
   if (back) {
     pb.ellipse(hx, hy + 0.5, 4.6, 4.4, (x, y, dx, dy) => (dy > 0.3 ? under : dx < -0.2 ? Hd : H));
+    // la capuche pend dans le dos
+    pb.ellipse(hx + 0.5, hy + 7, 5.5, 3.4, OUTLINE);
+    pb.ellipse(hx + 0.5, hy + 7, 4.5, 2.6, (x, y, dx, dy) => (dy > 0.4 || dx < -0.4 ? hoodD : hood));
   } else {
     if (q.glow) { // yeux qui s'embrasent : les quatre yeux brillent
       const hot = C('#ff5050'), core = C('#ffe0d0');
@@ -216,20 +223,23 @@ export const BODIES = {
     head: gojoHead, trail: C('#bfe2ff'),
     torsoFn: (dx, dy, back) => (!back && dy > 9 && dy < 12 && dx > -1 && dx < 3 ? C('#36406a') : !back && dy === 7 && dx === 1 ? C('#e8c050') : 0),
   },
-  // Sukuna à Shibuya (saison 2) : dans le corps d'Itadori, torse nu couvert de tatouages noirs, pantalon d'uniforme.
+  // Sukuna à Shibuya (saison 2) dans le corps d'Itadori : uniforme de Jujutsu de Yuji (veste sombre à col
+  // montant, capuche rouge, boutons en spirale dorés) et pantalon assorti.
   sukuna: {
     fw: 48, fh: 58, ox: 24, oy: 55,
     thigh: 7, shin: 8, torso: 12, uarm: 6, farm: 6, legW: 3, armW: 3, hipW: 8, shW: 10, headR: 4, hand: 2,
-    col: { skin: C('#f0c8ac'), skinD: C('#cf9f82'), top: C('#f0c8ac'), topD: C('#cf9f82'), topL: C('#fbdcc4'), pants: C('#1f2236'), pantsD: C('#141626'), shoe: C('#1a1418') },
-    head: sukunaHead, bareForearm: true, tattoo: 'bands', trail: C('#ffb0b0'),
+    col: { skin: C('#f0c8ac'), skinD: C('#cf9f82'), top: C('#262b44'), topD: C('#181c2e'), topL: C('#353c5c'), pants: C('#22263c'), pantsD: C('#161929'), shoe: C('#2b2730') },
+    head: sukunaHead, trail: C('#ffb0b0'),
     torsoFn: (dx, dy, back) => {
-      const ink = C('#14101a');
-      if (dy < 2) return C('#2a1f2e'); // ceinture
-      if (dy === 2) return C('#1f2236');
-      if (back) return (dy === 8 || dy === 9) && Math.abs(dx) < 4 ? ink : 0;
-      if (dy === 10 || (dy === 9 && Math.abs(dx) > 2)) return ink;   // bande sur la poitrine
-      if (dy === 7 && Math.abs(dx) < 3) return ink;                    // seconde bande
-      if (dy >= 3 && dy <= 6 && dx === 0) return C('#cf9f82');         // ligne des abdos
+      const red = C('#c4232d'), redD = C('#8e1820'), gold = C('#e0b24a');
+      if (back) {
+        if (dy >= 6 && Math.abs(dx) < 4) return dy === 6 || Math.abs(dx) === 3 ? redD : red; // capuche dans le dos
+        return 0;
+      }
+      if (dy >= 10) return dx < 0 ? redD : red;                          // capuche autour du cou
+      if (dx === 0 && dy >= 1) return C('#11141f');                       // fermeture de la veste
+      if (dx === 1 && (dy === 3 || dy === 6 || dy === 9)) return gold;    // boutons en spirale
+      if (dy === 0) return C('#11141f');                                  // bas de la veste
       return 0;
     },
   },
