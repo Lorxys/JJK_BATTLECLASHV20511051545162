@@ -20,6 +20,10 @@ export class Controls {
     this.mx = 0; this.my = 0; this.mag = 0;
     this.attackHeld = false;
     this.pressed = new Set();
+    this.held = new Set(); // techniques maintenues (tir continu)
+    this.aiming = {}; // visée en cours par glissement sur un bouton : act -> { id, x, y, dir }
+    this.released = {}; // direction choisie au relâchement : act -> dir
+    this.modes = {}; // act -> 'aim' (viser puis relâcher), 'hold' (tir continu), 'tap'
     this.keys = new Set();
     this.joy = null;
     this.editing = false;
@@ -94,6 +98,7 @@ export class Controls {
       b.name.textContent = p.name;
       b.el.style.setProperty('--pc', p.color);
       b.el.classList.toggle('domainbtn', p.id === 'domain');
+      this.modes['p' + i] = p.id === 'domain' ? 'tap' : p.hold ? 'hold' : 'aim';
     });
   }
 
@@ -111,7 +116,11 @@ export class Controls {
   }
 
   show(v) { this.el.classList.toggle('hidden', !v); if (!v) this.reset(); }
-  reset() { this.mx = this.my = this.mag = 0; this.attackHeld = false; this.joy = null; this.joyBase.classList.add('hidden'); this.pressed.clear(); }
+  reset() {
+    this.mx = this.my = this.mag = 0; this.attackHeld = false; this.joy = null; this.joyBase.classList.add('hidden'); this.pressed.clear();
+    this.held.clear(); this.aiming = {}; this.released = {};
+    for (const b of Object.values(this.btns)) { b.el.classList.remove('down', 'aiming'); b.lbl.style.transform = ''; }
+  }
 
   // --- Joystick ---
   joyDown(e) {
@@ -152,11 +161,28 @@ export class Controls {
       this.drag = { act, id: e.pointerId, x: e.clientX, y: e.clientY, r: L.r, b: L.b, moved: false };
       return;
     }
+    this.btns[act].el.classList.add('down');
+    const mode = this.modes[act];
+    if (mode === 'aim' || mode === 'hold') {
+      // glisser depuis le bouton choisit la direction de la technique
+      this.aiming[act] = { id: e.pointerId, x: e.clientX, y: e.clientY, dir: null };
+      if (mode === 'hold') this.held.add(act);
+      return;
+    }
     this.pressed.add(act);
     if (act === 'attack') this.attackHeld = true;
-    this.btns[act].el.classList.add('down');
   }
   btnMove(e, act) {
+    const am = this.aiming[act];
+    if (!this.editing && am && am.id === e.pointerId) {
+      const dx = e.clientX - am.x, dy = e.clientY - am.y, l = Math.hypot(dx, dy);
+      const vh = window.innerHeight, b = this.btns[act];
+      if (l > vh * 0.035) { am.dir = worldDirFromScreen(dx, dy); b.el.classList.add('aiming'); }
+      else { am.dir = null; b.el.classList.remove('aiming'); }
+      const m = Math.min(l, vh * 0.06) / (l || 1);
+      b.lbl.style.transform = `translate(${Math.round(dx * m)}px, ${Math.round(dy * m)}px)`;
+      return;
+    }
     if (!this.editing || !this.drag || this.drag.id !== e.pointerId) return;
     const vh = window.innerHeight;
     const dx = (e.clientX - this.drag.x) / vh, dy = (e.clientY - this.drag.y) / vh;
@@ -175,7 +201,15 @@ export class Controls {
       return;
     }
     if (act === 'attack') this.attackHeld = false;
-    this.btns[act].el.classList.remove('down');
+    const b = this.btns[act];
+    b.el.classList.remove('down', 'aiming');
+    const am = this.aiming[act];
+    if (am && am.id === e.pointerId) {
+      delete this.aiming[act];
+      b.lbl.style.transform = '';
+      this.held.delete(act);
+      if (this.modes[act] === 'aim' && e.type !== 'pointercancel') { this.released[act] = am.dir; this.pressed.add(act); }
+    }
   }
 
   startEdit(onDone) {
@@ -223,6 +257,13 @@ export class Controls {
     if (sx || sy) { [mx, my] = worldDirFromScreen(sx, sy * 0.5 * 2); mag = 1; }
     const pressed = this.pressed;
     this.pressed = new Set();
-    return { mx, my, mag, attackHeld: this.attackHeld, pressed };
+    // directions de visée : glissement en cours ou choisie au relâchement
+    const powerAim = Object.assign({}, this.released);
+    let aiming = null;
+    for (const [act, am] of Object.entries(this.aiming)) { powerAim[act] = am.dir; if (am.dir) aiming = { act, dir: am.dir }; }
+    this.released = {};
+    const held = new Set(this.held);
+    for (const [code, act] of [['KeyU', 'p0'], ['Digit1', 'p0'], ['KeyI', 'p1'], ['Digit2', 'p1']]) if (k.has(code) && this.modes[act] === 'hold') held.add(act);
+    return { mx, my, mag, attackHeld: this.attackHeld, pressed, held, powerAim, aiming };
   }
 }

@@ -55,8 +55,8 @@ export const KITS = {
     name: 'Gojo Satoru', kanji: '五条悟',
     speed: 4.6,
     powers: [
-      { id: 'blue', name: 'Bleu', kanji: '蒼', cd: 7, color: '#3d8bff' },
-      { id: 'red', name: 'Rouge', kanji: '赫', cd: 5, color: '#ff3b3b' },
+      { id: 'blue', name: 'Bleu', kanji: '蒼', cd: 0, color: '#3d8bff' },
+      { id: 'red', name: 'Rouge', kanji: '赫', cd: 0, color: '#ff3b3b' },
       { id: 'purple', name: 'Violet', kanji: '茈', cd: 22, color: '#a24bff' },
       { id: 'domain', name: 'Unlimited Void', kanji: '無量空処', cd: DOMAIN.voidCooldown, color: '#6b8cff' },
     ],
@@ -66,8 +66,8 @@ export const KITS = {
     name: 'Ryomen Sukuna', kanji: '両面宿儺',
     speed: 4.8,
     powers: [
-      { id: 'dismantle', name: 'Démantèlement', kanji: '解', cd: 2.5, color: '#ff6a6a' },
-      { id: 'cleave', name: 'Clivage', kanji: '捌', cd: 6, color: '#ffd0d0' },
+      { id: 'dismantle', name: 'Démantèlement', kanji: '解', cd: 0, color: '#ff6a6a', hold: true },
+      { id: 'cleave', name: 'Clivage', kanji: '捌', cd: 0, color: '#ffd0d0', hold: true },
       { id: 'fuga', name: 'Flèche de feu', kanji: '竈', cd: 16, color: '#ff8a1e' },
       { id: 'domain', name: 'Malevolent Shrine', kanji: '伏魔御廚子', cd: DOMAIN.shrineCooldown, color: '#c4141e' },
     ],

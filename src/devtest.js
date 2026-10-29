@@ -20,12 +20,13 @@ export function runTest(qs) {
     const e = W.enemies.nearest(P.x, P.y, 20);
     if (e) { const d = Math.hypot(e.x - P.x, e.y - P.y); W.input.mx = (e.x - P.x) / d; W.input.my = (e.y - P.y) / d; W.input.mag = a === 'move' ? 1 : 0.5; }
     if (a === 'move') { setTimeout(() => { W.input.mag = 0; }, step * 0.8); return; }
+    if (a.startsWith('hold')) { const k = 'p' + a.slice(4); W.input.held.add(k); setTimeout(() => { W.input.held.delete(k); W.input.mag = 0; }, step * 4); return; }
     if (a === 'radial') { W.input.mag = 0; W.input.pressed.add('p1'); return; }
     W.input.pressed.add(a === 'a' ? 'attack' : a);
     setTimeout(() => { if (a !== 'move') W.input.mag = 0; }, 60);
   }, step);
   setInterval(() => {
     const err = document.getElementById('errlog').textContent;
-    document.title = `F${Math.round(W.scene.game.loop.actualFps)} T${W.time.toFixed?.(1)} E${W.enemies.count} C${W.chaos.level} B${W.city.buildings.filter((b) => b.state > 0).length} ${err ? 'ERR ' + err.slice(0, 120) : 'OK'}`;
+    document.title = `V${W.fusions || 0} b${W.player.blues.length} s${W.player.state} F${Math.round(W.scene.game.loop.actualFps)} T${W.time.toFixed?.(1)} E${W.enemies.count} C${W.chaos.level} B${W.city.buildings.filter((b) => b.state > 0).length} ${err ? 'ERR ' + err.slice(0, 120) : 'OK'}`;
   }, 200);
 }

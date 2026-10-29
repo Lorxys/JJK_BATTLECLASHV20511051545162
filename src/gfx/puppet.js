@@ -297,6 +297,11 @@ ANIMS.sukuna = {
   dodge: { fps: 10, poses: [p({ lean: -0.3, bob: 2, nt: 0.5, nk: 1.2, ft: -0.6, fk: 0.6, nua: 0.5, nfa: 1.0, fua: 0.4, ffa: 1.2 })] },
   cast: { fps: 12, poses: [p({ lean: 0.05, nua: -0.8, nfa: -1.9, nt: 0.3, ft: -0.3 }), p({ lean: 0.2, nua: 1.6, nfa: 1.6, nt: 0.4, ft: -0.4 }), p({ lean: 0.2, nua: 1.9, nfa: 2.0, nt: 0.4, ft: -0.4 })] },
   charge: { fps: 6, poses: [p({ lean: 0, nua: 1.5, nfa: 1.55, fua: 0.2, ffa: -1.5, nt: 0.4, ft: -0.4 }), p({ lean: -0.05, bob: 1, nua: 1.5, nfa: 1.55, fua: 0.0, ffa: -1.6, nt: 0.4, ft: -0.4 })] },
+  fuga: { fps: 6, poses: [ // Flèche de feu : mains ouvertes (開) puis arc de feu bandé
+    p({ lean: 0.1, bob: 1, nua: 1.0, nfa: 2.2, fua: -1.0, ffa: -2.2, nt: 0.3, ft: -0.3 }),
+    p({ lean: 0, nua: 1.5, nfa: 1.6, fua: 1.4, ffa: 1.55, nt: 0.45, ft: -0.45 }),
+    p({ lean: -0.12, nua: 1.75, nfa: 1.8, fua: -1.35, ffa: 1.3, nt: 0.6, nk: 0.2, ft: -0.65, fk: 0.35 }),
+    p({ lean: -0.14, bob: 1, nua: 1.78, nfa: 1.82, fua: -1.4, ffa: 1.4, nt: 0.6, nk: 0.25, ft: -0.65, fk: 0.4 })] },
   sign: { fps: 4, poses: [p({ nua: 0.5, nfa: 2.6, fua: 0.65, ffa: 2.5 }), p({ bob: 1, nua: 0.5, nfa: 2.65, fua: 0.65, ffa: 2.55 })] },
   stagger: { fps: 8, poses: [p({ lean: -0.4, nua: -1.2, nfa: -2.0, fua: -0.9, ffa: -1.6, nk: 0.4 })] },
 };

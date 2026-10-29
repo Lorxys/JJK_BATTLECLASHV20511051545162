@@ -15,7 +15,7 @@ import { Chaos } from './game/chaos.js';
 import { Player } from './game/player.js';
 import { installCombat } from './game/combat.js';
 
-const NO_INPUT = { mx: 0, my: 0, mag: 0, attackHeld: false, pressed: new Set() };
+const NO_INPUT = { mx: 0, my: 0, mag: 0, attackHeld: false, pressed: new Set(), held: new Set(), powerAim: {}, aiming: null };
 
 export class WorldScene extends Phaser.Scene {
   constructor() { super('world'); }
