@@ -217,7 +217,7 @@ export class Enemies {
       const dx = e.x - D.x, dy = e.y - D.y, d = Math.hypot(dx, dy);
       if (d < D.r - 0.2) e.inDomain = true;
       if (e.inDomain && d > D.r - 0.4) { e.x = D.x + (dx / d) * (D.r - 0.4); e.y = D.y + (dy / d) * (D.r - 0.4); e.kvx *= -0.3; e.kvy *= -0.3; }
-      if (D.type === 'void' && D.phase === 'active' && e.inDomain) { e.frozen = true; }
+      if (D.phase === 'active' && e.inDomain) { e.frozen = D.type; } // paralysie dans les deux territoires
       else e.frozen = false;
     } else { e.inDomain = false; e.frozen = false; }
     if (e.frozen) { if (e.held) e.dropHeld(); e.state = 'frozen'; return; }
@@ -478,7 +478,7 @@ export class Enemies {
     e.sprite.setPosition(sx + jitter, sy - e.z - hover).setDepth(depthOf(e.x, e.y));
     e.shadow.setPosition(sx, sy).setVisible(settings().shadows && e.sprite.visible);
     if (e.flash > 0) e.sprite.setTintFill(0xffffff);
-    else if (e.frozen) e.sprite.setTint(0x9fb0ff);
+    else if (e.frozen) e.sprite.setTint(e.frozen === 'shrine' ? (Math.random() < 0.5 ? 0xff3030 : 0xff7070) : 0x9fb0ff);
     else if (st === 'stunned') e.sprite.setTint(Math.floor(e.animT * 8) % 2 ? 0xffe14a : 0xffffff);
     else if (e.rage) e.sprite.setTint(0xffb0b0);
     else e.sprite.clearTint();
