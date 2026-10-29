@@ -176,6 +176,7 @@ export class City {
   finishCollapse(b) {
     b.collapse = 0;
     b.state = 4;
+    W.ground && W.ground.dropShadow(b);
     const key = buildingTex(b.variant, 4);
     const a = ART.anchors[key];
     this.setBuildingTex(b, key);

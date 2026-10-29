@@ -6,6 +6,7 @@ export const DEFAULTS = {
   quality: 'auto',      // auto | low | medium | high
   effects: 'normal',    // reduced | normal | max
   shadows: true,
+  post: true,           // post-traitement caméra (étalonnage, bloom, vignette)
   debris: 'normal',     // few | normal | many
   shake: true,
   music: 0.6,

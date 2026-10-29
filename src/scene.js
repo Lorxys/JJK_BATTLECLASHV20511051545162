@@ -123,6 +123,23 @@ export class WorldScene extends Phaser.Scene {
       W.city.shadows = s.shadows;
       for (const m of W.city.movables) m.shadow.setVisible(false);
     }
+    W.ground && W.ground.setShadows(s.shadows);
+    this.applyPost();
+  }
+
+  // Post-traitement caméra (WebGL) : étalonnage nocturne, halo lumineux (bloom) et vignettage.
+  // Le bloom, plus coûteux, saute en qualité basse.
+  applyPost() {
+    const cam = this.cameras.main, fx = cam.postFX;
+    if (!fx) return;
+    fx.clear();
+    this.postQ = W.quality;
+    if (!settings().post) return;
+    const cm = fx.addColorMatrix();
+    cm.contrast(0.22);
+    cm.saturate(-0.12, true);
+    if (W.quality !== 'low') fx.addBloom(0xffffff, 1, 1, 0.8, 0.22, 2);
+    fx.addVignette(0.5, 0.5, 0.9, 0.42);
   }
 
   autoQuality(dt) {
@@ -136,6 +153,7 @@ export class WorldScene extends Phaser.Scene {
     if (fps < 42 && i > 0) { W.quality = order[i - 1]; this.goodT = 0; }
     else if (fps > 57) { this.goodT += 2; if (this.goodT > 20 && i < 2) { W.quality = order[i + 1]; this.goodT = 0; } }
     else this.goodT = 0;
+    if (this.postQ !== W.quality && (this.postQ === 'low' || W.quality === 'low')) this.applyPost();
   }
 
   update(time, delta) {

@@ -21,6 +21,7 @@ export class Night {
     this.ground = scene.add.graphics().setDepth(-8.9e5).setBlendMode(1);
     this.top = scene.add.graphics().setDepth(9e5 - 6).setBlendMode(1);
     this.lights = [];   // lumières de l'image courante
+    this.refl = [];     // reflets étirés sur la chaussée mouillée
     this.flashes = [];  // lumières qui s'éteignent d'elles-mêmes
     this.t = 0;
     this.soft = settings().hd;
@@ -37,8 +38,14 @@ export class Night {
     this.t += dt;
     const city = W.city;
     if (city) {
-      for (const p of city.props) if (p.type === 'lamp' && !p.broken && p.img.visible) this.add(p.x + 0.15, p.y + 0.15, 2.8, 0xffc870, 0.3, 0.15);
-      for (const p of city.props) if (p.type === 'traffic' && !p.broken && p.img.visible) this.add(p.x + 0.3, p.y + 0.3, 0.9, 0x7dffa8, 0.16, 0.08);
+      for (const p of city.props) if (p.type === 'lamp' && !p.broken && p.img.visible) {
+        this.add(p.x + 0.15, p.y + 0.15, 2.8, 0xffc870, 0.3, 0.15);
+        this.refl.push(p.x + 0.15, p.y + 0.15, 0xffd890, 0.5);
+      }
+      for (const p of city.props) if (p.type === 'traffic' && !p.broken && p.img.visible) {
+        this.add(p.x + 0.3, p.y + 0.3, 0.9, 0x7dffa8, 0.16, 0.08);
+        this.refl.push(p.x + 0.3, p.y + 0.3, 0x7dffa8, 0.4);
+      }
       for (const b of city.buildings) {
         if (!b.img.visible) continue;
         if (b.glowPool && b.state < 3) this.add(b.x + b.s + 0.2, b.y + b.s * 0.5, b.s * 0.8, b.glowPool, 0.16);
@@ -66,6 +73,7 @@ export class Night {
     }
     this.draw(cam);
     this.lights.length = 0;
+    this.refl.length = 0;
   }
 
   // Vacillement des flammes par paliers (pas de variation continue).
@@ -97,6 +105,15 @@ export class Night {
         top.fillEllipse(cx, cy - 10, w * 0.9, h * 1.6, 20);
         top.fillEllipse(cx, cy - 10, w * 0.5, h * 0.9, 14);
       }
+    }
+    // reflets : la source lumineuse se mire sous elle, étirée verticalement par l'eau
+    const R = this.refl;
+    for (let i = 0; i < R.length; i += 4) {
+      const cx = isoX(R[i], R[i + 1]), cy = isoY(R[i], R[i + 1]) + 16;
+      if (cx < v.x - m || cx > v.right + m || cy < v.y - m || cy > v.bottom + m) continue;
+      const a = R[i + 3] * (0.85 + 0.15 * Math.sin(this.t * 2.3 + R[i] * 3));
+      if (this.soft) { this.glow(n++, false, cx, cy, 7, 30, R[i + 2], a); this.glow(n++, false, cx, cy - 4, 3, 16, 0xffffff, a * 0.5); }
+      else { g.fillStyle(R[i + 2], a * 0.35); g.fillRect(cx - 2, cy - 12, 4, 24); g.fillRect(cx - 1, cy - 16, 2, 32); }
     }
     for (let i = n; i < this.pool.length; i++) if (this.pool[i].visible) this.pool[i].setVisible(false);
   }

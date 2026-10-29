@@ -196,7 +196,7 @@ export function generateCity(seed = 1337) {
         const d = districtAt(x, y);
         if (corner) { const k = rng(); if (k < 0.35) addP(x + 0.5, y + 0.5, 'sign'); else if (k < 0.7) addP(x + 0.5, y + 0.5, 'traffic'); continue; }
         if ((x + y) % 6 === 0) addP(x + 0.5, y + 0.5, 'lamp');
-        else if ((x + y) % 6 === 3 && (d === 'R' || d === 'K' || d === 'I')) addP(x + 0.5, y + 0.5, 'pole');
+        else if ((x + y) % 12 === 3 && (d === 'R' || d === 'K' || d === 'I')) addP(x + 0.5, y + 0.5, 'pole');
         else if ((d === 'R' || d === 'P') && (x * 7 + y * 3) % 9 === 0) addP(x + 0.5, y + 0.5, d === 'P' ? 'tree_cherry' : 'tree_round');
         else if (d === 'K' && rng() < 0.05) addM(x + 0.5, y + 0.5, 'vending', 0);
         else if (rng() < 0.025) addP(x + 0.5, y + 0.5, 'hydrant');

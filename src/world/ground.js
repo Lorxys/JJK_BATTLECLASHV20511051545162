@@ -4,6 +4,21 @@ import { W } from '../state.js';
 import { isoX, isoY, makeRng } from '../util.js';
 import { NIGHT_TINT } from '../game/night.js';
 import { makeTileSet, tileFor, makeDecals, tileDecals, makeCrater, makeScorch, makeCrackStamp, DMG_COLORS } from '../gfx/tiles.js';
+import { VARIANTS } from '../gfx/buildingArt.js';
+import { settings } from '../settings.js';
+
+// Clair de lune venant de l'avant-droite : les ombres partent vers l'arrière (direction monde, par case de hauteur).
+const MOON = [-0.35, -1];
+const SHADOW_LEN = 0.55, SHADOW_ALPHA = 0.42;
+// Enveloppe convexe (chaîne monotone).
+function hull(pts) {
+  pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
 
 let tileSet = null, decals = null;
 const stamps = { crater: [], scorch: [], crack: [] };
@@ -38,7 +53,17 @@ export class Ground {
           tex.setFilter(Phaser.Textures.FilterMode.NEAREST); // sol : texels nets, même en rendu HD
         } else canvas = tex.getSourceImage();
         const img = scene.add.image(left, top, key).setOrigin(0, 0).setDepth(-1e6).setTint(NIGHT_TINT);
-        this.chunks.push({ cx, cy, left, top, w: canvas.width, h: canvas.height, canvas, ctx: canvas.getContext('2d'), tex, img, dirty: false });
+        // ombres portées des bâtiments (clair de lune) : calque à demi-résolution en HD pour des bords adoucis
+        const sk = 'shadow_' + cx + '_' + cy, half = settings().hd ? 2 : 1;
+        let stex = scene.textures.get(sk), scv;
+        if (!stex || stex.key === '__MISSING') {
+          scv = document.createElement('canvas');
+          scv.width = canvas.width / half; scv.height = canvas.height / half;
+          stex = scene.textures.addCanvas(sk, scv);
+          if (half === 1) stex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        } else scv = stex.getSourceImage();
+        const simg = scene.add.image(left, top, sk).setOrigin(0, 0).setDisplaySize(canvas.width, canvas.height).setDepth(-1e6 + 1).setAlpha(SHADOW_ALPHA);
+        this.chunks.push({ cx, cy, left, top, w: canvas.width, h: canvas.height, canvas, ctx: canvas.getContext('2d'), tex, img, dirty: false, scv, sctx: scv.getContext('2d'), stex, simg, half });
       }
     }
     this.redrawAll();
@@ -63,6 +88,49 @@ export class Ground {
       }
       ch.tex.refresh();
     }
+    this.gone = new Set();
+    this.drawShadows(this.chunks);
+  }
+
+  // Ombre d'un bâtiment : enveloppe convexe de son emprise et de son emprise décalée selon la lune.
+  shadowHull(b) {
+    const H = VARIANTS[b.variant].h, L = H / 16 * SHADOW_LEN;
+    const sx = MOON[0] * L, sy = MOON[1] * L;
+    const pts = [];
+    for (const [i, j] of [[0, 0], [b.s, 0], [b.s, b.s], [0, b.s]]) {
+      pts.push([isoX(b.x + i, b.y + j), isoY(b.x + i, b.y + j)]);
+      pts.push([isoX(b.x + i + sx, b.y + j + sy), isoY(b.x + i + sx, b.y + j + sy)]);
+    }
+    return hull(pts);
+  }
+
+  drawShadows(chunks) {
+    const list = this.map.buildings.filter((b) => !this.gone.has(b.x * 1000 + b.y) && VARIANTS[b.variant].style !== 'crane').map((b) => ({ b, p: this.shadowHull(b) }));
+    for (const ch of chunks) {
+      const c = ch.sctx, k = 1 / ch.half;
+      c.clearRect(0, 0, ch.scv.width, ch.scv.height);
+      c.fillStyle = '#05060e';
+      for (const { p } of list) {
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        for (const q of p) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
+        if (x1 < ch.left || x0 > ch.left + ch.w || y1 < ch.top || y0 > ch.top + ch.h) continue;
+        c.beginPath();
+        p.forEach((q, i) => (i ? c.lineTo : c.moveTo).call(c, (q[0] - ch.left) * k, (q[1] - ch.top) * k));
+        c.closePath(); c.fill();
+      }
+      ch.stex.refresh();
+    }
+  }
+
+  setShadows(on) { for (const ch of this.chunks) ch.simg.setAlpha(on ? SHADOW_ALPHA : 0); }
+
+  // Bâtiment effondré : son ombre disparaît.
+  dropShadow(b) {
+    this.gone.add(b.x * 1000 + b.y);
+    const p = this.shadowHull(b);
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const q of p) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
+    this.drawShadows(this.chunks.filter((ch) => !(x1 < ch.left || x0 > ch.left + ch.w || y1 < ch.top || y0 > ch.top + ch.h)));
   }
 
   // Dessine un canvas centré sur la position monde (x, y) dans tous les blocs concernés.
@@ -123,14 +191,14 @@ export class Ground {
     let budget = 2;
     for (const ch of this.chunks) {
       const vis = !(ch.left + ch.w < vx || ch.left > vx + vw || ch.top + ch.h < vy || ch.top > vy + vh);
-      if (ch.img.visible !== vis) ch.img.setVisible(vis);
+      if (ch.img.visible !== vis) { ch.img.setVisible(vis); ch.simg.setVisible(vis); }
       if (ch.dirty && vis && budget > 0) { ch.tex.refresh(); ch.dirty = false; budget--; }
     }
     if (budget > 0) for (const ch of this.chunks) if (ch.dirty && budget-- > 0) { ch.tex.refresh(); ch.dirty = false; }
   }
 
   destroy() {
-    for (const ch of this.chunks) ch.img.destroy();
+    for (const ch of this.chunks) { ch.img.destroy(); ch.simg.destroy(); }
     this.chunks = [];
   }
 }

@@ -108,18 +108,19 @@ export class PB {
       }
     }
   }
-  // Contour sombre autour de la silhouette (style 16 bits).
+  // Contour autour de la silhouette. Avec le contour par défaut, il prend une teinte sombre de la couleur
+  // voisine (contour sélectif) : plus naturel qu'un trait noir uniforme.
   outline(c = OUTLINE, diag = false) {
     const { w, h, d } = this;
     const src = d.slice();
+    const sel = c === OUTLINE;
+    const o = (xx, yy) => (xx >= 0 && yy >= 0 && xx < w && yy < h && (src[yy * w + xx] >>> 24) !== 0 ? src[yy * w + xx] : 0);
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         if (src[y * w + x] >>> 24) continue;
-        const o = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && (src[yy * w + xx] >>> 24) !== 0;
-        if (o(x - 1, y) || o(x + 1, y) || o(x, y - 1) || o(x, y + 1) ||
-          (diag && (o(x - 1, y - 1) || o(x + 1, y - 1) || o(x - 1, y + 1) || o(x + 1, y + 1)))) {
-          d[y * w + x] = c;
-        }
+        const n = o(x - 1, y) || o(x + 1, y) || o(x, y - 1) || o(x, y + 1) ||
+          (diag && (o(x - 1, y - 1) || o(x + 1, y - 1) || o(x - 1, y + 1) || o(x + 1, y + 1)));
+        if (n) d[y * w + x] = sel ? mixC(shadeC(n, 0.42), OUTLINE, 0.45) : c;
       }
     }
     return this;

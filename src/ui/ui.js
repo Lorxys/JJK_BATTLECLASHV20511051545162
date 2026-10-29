@@ -212,6 +212,7 @@ export class UI {
         ${row('Qualité', 'quality', L[s.quality])}
         ${row('Effets', 'effects', L[s.effects])}
         ${row('Ombres', 'shadows', s.shadows ? 'Oui' : 'Non')}
+        ${row('Post-traitement', 'post', s.post ? 'Oui' : 'Non')}
         ${row('Débris', 'debris', dl[s.debris])}
         ${row('Tremblements', 'shake', s.shake ? 'Oui' : 'Non')}
         ${row('Afficher les FPS', 'fps', s.fps ? 'Oui' : 'Non')}

@@ -239,6 +239,16 @@ export function makeDecals() {
     }
     return pb.toCanvas();
   });
+  // flaques après la pluie : eau sombre et lisse qui reflète le ciel nocturne, liseré humide autour
+  many('puddle', 3, (s) => decal(80 + s, (X, Y, tx, ty, h) => {
+    const cx = 16 + (s - 1) * 4, cy = 8 + (s === 2 ? 1 : 0);
+    const d = Math.hypot((X + 0.5 - cx) / (7 + s * 1.5), (Y + 0.5 - cy) / (2.6 + s * 0.6)) + (hash2(X >> 1, Y, 81 + s) - 0.5) * 0.35;
+    if (d > 1.12) return 0;
+    if (d > 0.92) return A('#1c1e26', 0.45); // bord mouillé
+    if ((X + Y * 3 + s) % 11 === 0 && Y % 2) return A('#9fb2d8', 0.75); // reflet du ciel
+    return Y < cy - 1 ? A('#2a3550', 0.9) : A('#222a3e', 0.9);
+  }));
+
   // ombre portée au pied d'un bâtiment (bord de la case qui touche le mur) et bordure de trottoir
   const edge = (side, w, col) => decal(70, (X, Y, tx, ty, h) => {
     const d = side === 'xm' ? tx : side === 'ym' ? ty : side === 'xp' ? 1 - tx : 1 - ty;
@@ -263,12 +273,14 @@ export function tileDecals(D, map, x, y, isBuilding) {
     if (h < 0.035) out.push(D.manhole[0]);
     else if (h < 0.11) out.push(pick('crack'));
     else if (h < 0.16) out.push(pick('oil'));
+    else if (h < 0.26) out.push(pick('puddle'));
     for (const [dx, dy, s] of [[-1, 0, 'xm'], [1, 0, 'xp'], [0, -1, 'ym'], [0, 1, 'yp']]) if (at(x + dx, y + dy) === T.SIDEWALK) {
       out.push(D['gutter_' + s][0]);
       if (h > 0.9 && (s === 'xm' || s === 'ym')) out.push(D.grate[0]);
     }
   } else if (t === T.SIDEWALK) {
-    if (h < 0.4) out.push(pick('sideDirt'));
+    if (h > 0.94) out.push(pick('puddle'));
+    else if (h < 0.4) out.push(pick('sideDirt'));
     for (const [dx, dy, s] of [[-1, 0, 'xm'], [1, 0, 'xp'], [0, -1, 'ym'], [0, 1, 'yp']]) if (at(x + dx, y + dy) === T.ROAD) out.push(D['curb_' + s][0]);
   } else if (t === T.GRASS || t === T.FIELD) {
     if (h < 0.6) out.push(pick('tuft'));
